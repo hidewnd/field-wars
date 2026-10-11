@@ -30,7 +30,15 @@ describe('冻结地图和规则', () => {
     expect(levelForAp(499)).toBe(1);
     expect(levelForAp(500)).toBe(2);
     expect(portalLevel(point('a',0,0))).toBe(1);
-    expect(portalRange(point('a',0,0))).toBe(16_000);
+    expect(portalRange(point('a',0,0))).toBe(RULES.minimumPortalRangeCm);
+  });
+  it('L1连线范围为320米，混合升级不缩短射程，高等级保留原范围',()=>{
+    const portal=point('a',0,0);
+    expect(portalRange(portal)).toBe(32000);
+    portal.resonators=portal.resonators.map((r,index)=>({...r!,level:index===0?2:1}));
+    expect(portalRange(portal)).toBeGreaterThanOrEqual(32000);
+    portal.resonators=portal.resonators.map(r=>({...r!,level:8}));
+    expect(portalRange(portal)).toBe(RULES.rangeCm[64]);
   });
 });
 
@@ -73,12 +81,12 @@ describe('精确线场几何', () => {
     expect(lineClearanceAtLeast({x:5_000,y:1_099},terrain,1_000)).toBe(false);
     const map={...BETA_MAP,water:[],rails:[]};
     expect(() => validateNewPortalLocation(map,[],{x:15_000,y:15_000},'D-01')).not.toThrow();
-    expect(RULES.newPortals.minApprovedSpacingCm).toBe(2_000);
+    expect(RULES.newPortals.minApprovedSpacingCm).toBe(500);
     expect(RULES.newPortals.cityBoundaryClearanceCm).toBe(15_000);
     expect(RULES.newPortals.waterShoreClearanceCm).toBe(12_000);
     expect(RULES.newPortals.railCenterlineClearanceCm).toBe(8_000);
-    expect(() => validateNewPortalLocation(map,[{x:15_000,y:15_000}],{x:16_999,y:15_000},'D-01')).toThrowError('PO_SPACING');
-    expect(() => validateNewPortalLocation(map,[{x:15_000,y:15_000}],{x:17_000,y:15_000},'D-01')).not.toThrow();
+    expect(() => validateNewPortalLocation(map,[{x:15_000,y:15_000}],{x:15_499,y:15_000},'D-01')).toThrowError('PO_SPACING');
+    expect(() => validateNewPortalLocation(map,[{x:15_000,y:15_000}],{x:15_500,y:15_000},'D-01')).not.toThrow();
     expect(BETA_MAP.water[0].halfWidth).toBe(15_000);
     expect(BETA_MAP.rails[0].halfWidth).toBe(0);
     expect(BETA_MAP.water[0].points).toHaveLength(329);

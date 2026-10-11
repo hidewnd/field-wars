@@ -1,3 +1,4 @@
+import {appPath} from './paths';
 import {requestId as newRequestId, recoveryFingerprint} from './crypto';
 import type { CommandEnvelope, Player, Snapshot } from '../../../shared/types';
 
@@ -38,11 +39,11 @@ async function parse<T>(response: Response, allowEmpty=false): Promise<T> {
 }
 
 export async function get<T>(path: string): Promise<T> {
-  return parse<T>(await fetch(path, { credentials: 'same-origin', cache: 'no-store' }));
+  return parse<T>(await fetch(appPath(path), { credentials: 'same-origin', cache: 'no-store' }));
 }
 
 export async function post<T>(path: string, body: object, csrfToken?: string, allowEmpty=false): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(appPath(path), {
     method: 'POST', credentials: 'same-origin',
     headers: { 'content-type': 'application/json', ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}) },
     body: JSON.stringify(body),
@@ -186,7 +187,7 @@ export async function command(path: string, state: Snapshot, payload: Record<str
 
 export function events(onInvalidate: () => void, onAlert: (value: Record<string, unknown>) => void): WebSocket {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const socket = new WebSocket(`${protocol}//${location.host}/api/events`);
+  const socket = new WebSocket(`${protocol}//${location.host}${appPath('/api/events')}`);
   let deliverySeq=0;
   socket.onopen=onInvalidate;
   socket.onmessage = event => {

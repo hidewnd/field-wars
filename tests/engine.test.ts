@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {advanceWorld, applyCommand, createPlayer, createWorld, GameError, refreshPlayer} from '../shared/engine.js';
 import type {CommandContext, Faction, MapData, Player, Portal, World} from '../shared/types.js';
+import {RULES} from '../shared/rules.js';
 
 function portal(id: string, x: number, y: number): Portal {
   return {id, name: id, x, y, districtId: 'd', faction: null, version: 0,
@@ -45,6 +46,119 @@ function linkedWorld(): World {
 }
 
 describe('beta-v1 纯规则引擎', () => {
+  it.each(['风', 'Wind', '星'.repeat(20), 'W'.repeat(20), '探索者Wind2026', '𠮷'.repeat(20)])('改名支持中英文与20字符边界：%s', name => {
+    const {world,player}=joined();
+    const out=doCommand(world,player,'rename',undefined,{name:` ${name} `});
+    expect(out.player.name).toBe(name);
+    expect(out.player).toMatchObject({id:player.id,ap:player.ap,xm:player.xm,inventory:player.inventory,faction:player.faction});
+    expect(player.name).toBe('玩家');
+  });
+
+  it.each(['星'.repeat(21), 'W'.repeat(21), '', '  ', '风\nWind', '风\u200bWind', null, 42])('非法名称不改写账号：%s', name => {
+    const {world,player}=joined(),before=structuredClone({world,player});
+    expect(rejectedCode(()=>doCommand(world,player,'rename',undefined,{name}))).toBe('INVALID_INPUT');
+    expect({world,player}).toEqual(before);
+  });
+
+  it('改名同步本人已部署脚和据点版本，保留他人署名、历史战报和资产', () => {
+    const {player}=joined(),world=linkedWorld();
+    world.portals.A.resonators[0]!.owner=player.id;
+    world.portals.A.resonators[0]!.ownerName=player.name;
+    world.portals.A.resonators[1]!.ownerName='他人';
+    world.battleEvents=[{id:'old',at:0,kind:'attack',faction:'red',actor:player.name,portals:['A']}];
+    const out=doCommand(world,player,'rename',undefined,{name:'新名字Wind'});
+    expect(out.world.portals.A.resonators[0]!.ownerName).toBe('新名字Wind');
+    expect(out.world.portals.A.resonators[1]!.ownerName).toBe('他人');
+    expect(out.world.portals.A.version).toBe(world.portals.A.version+1);
+    expect(out.world.portals.B).toEqual(world.portals.B);
+    expect(out.world.battleEvents).toEqual(world.battleEvents);
+    expect(out.world.links).toEqual(world.links);
+    expect(out.world.fields).toEqual(world.fields);
+  });
+
+  it('新账号携带新手引导，关闭后保存已读且重复确认保留原时间；老账号不补弹', () => {
+    const {world,player}=joined();
+    expect(player.tutorial.quick_start_pending_at).toBe(0);
+    const seen=doCommand(world,player,'guide-read',undefined,{},100);
+    expect(seen.player.tutorial).toEqual({quick_start_seen_at:100});
+    const again=doCommand(seen.world,seen.player,'guide-read',undefined,{},200);
+    expect(again.player.tutorial).toEqual({quick_start_seen_at:100});
+    player.tutorial={first_field_at:1};
+    expect(doCommand(world,player,'guide-read').player.tutorial).toEqual({first_field_at:1});
+  });
+
+  it('自动批量部署按背包从高到低填槽并遵守配额，固定等级只使用指定脚', () => {
+    const {world,player}=joined(); player.ap=240000; player.xm=10000;
+    player.inventory=[{type:'resonator',level:8,quantity:3},{type:'resonator',level:6,quantity:3},{type:'resonator',level:1,quantity:8}];
+    const auto=doCommand(world,player,'deploy-all','A');
+    expect(auto.world.portals.A.resonators.map(r=>r?.level)).toEqual([8,6,6,1,1,1,1,1]);
+    expect(auto.world.portals.A.resonators.every(r=>r?.ownerName==='玩家')).toBe(true);
+    const fixed=doCommand(world,player,'deploy-all','A',{level:6});
+    expect(fixed.world.portals.A.resonators.filter(Boolean).map(r=>r?.level)).toEqual([6,6]);
+    expect(fixed.player.inventory.find(i=>i.level===8)?.quantity).toBe(3);
+  });
+
+  it('单脚升级保留位置，更新部署人名称；等级不足和个人配额拒绝', () => {
+    const world=linkedWorld(),{player}=joined(); player.faction='blue'; player.ap=240000; player.xm=10000;
+    player.inventory=[{type:'resonator',level:8,quantity:2}];
+    const out=doCommand(world,player,'upgrade','A',{slot:0,level:8});
+    expect(out.world.portals.A.resonators[0]).toMatchObject({level:8,owner:player.id,ownerName:player.name,x:10000,y:10000});
+    expect(rejectedCode(()=>doCommand(out.world,out.player,'upgrade','A',{slot:1,level:8}))).toBe('QUOTA_EXCEEDED');
+    player.ap=0;
+    expect(rejectedCode(()=>doCommand(world,player,'upgrade','A',{slot:0,level:8}))).toBe('LEVEL_LOCKED');
+  });
+
+  it('丢弃使用真实位置，不回能量；跨阵营拾取守恒且重复拾取不再发放', () => {
+    const {world,player}=joined();
+    const out=doCommand(world,player,'drop',undefined,{type:'pulse',level:1,quantity:2,x:99999,y:99999});
+    const drop=out.world.droppedItems![0];
+    expect(drop).toMatchObject({x:player.x,y:player.y,item:{type:'pulse',level:1,quantity:2}});
+    expect(out.player.xm).toBe(player.xm);
+    expect(out.player.inventory.find(i=>i.type==='pulse')?.quantity).toBe(10);
+    const recipient=createPlayer('other','拾取者',0,player);recipient.faction='blue';
+    const picked=doCommand(out.world,recipient,'pickup',undefined,{dropId:drop.id});
+    expect(picked.player.inventory).toEqual([{type:'pulse',level:1,quantity:2}]);
+    expect(picked.world.droppedItems).toEqual([]);
+    expect(rejectedCode(()=>doCommand(picked.world,picked.player,'pickup',undefined,{dropId:drop.id}))).toBe('DROP_NOT_FOUND');
+    expect(world.droppedItems).toBeUndefined();
+  });
+
+  it.each([3000,3001])('拾取距离%d厘米严格按30米边界，超范围和满背包不移除物品', distance => {
+    const {world,player}=joined();
+    const dropped=doCommand(world,player,'drop',undefined,{type:'cube',level:1,quantity:1});
+    const recipient=createPlayer('other','拾取者',0,{x:player.x+distance,y:player.y});
+    const payload={dropId:dropped.world.droppedItems![0].id};
+    if(distance===3000)expect(doCommand(dropped.world,recipient,'pickup',undefined,payload).player.inventory).toHaveLength(1);
+    else expect(rejectedCode(()=>doCommand(dropped.world,recipient,'pickup',undefined,payload))).toBe('OUT_OF_RANGE');
+    recipient.x=player.x;recipient.inventory=[{type:'pulse',level:1,quantity:500}];
+    expect(rejectedCode(()=>doCommand(dropped.world,recipient,'pickup',undefined,payload))).toBe('INVENTORY_FULL');
+    expect(dropped.world.droppedItems).toHaveLength(1);
+  });
+
+  it('丢弃拒绝受保护Key、无效数量和移动中操作，允许丢弃高等级装备', () => {
+    const {world,player}=joined();
+    player.inventory=[{type:'key',level:1,quantity:1,portalId:'A',protected:true},{type:'pulse',level:8,quantity:1}];
+    expect(rejectedCode(()=>doCommand(world,player,'drop',undefined,{type:'key',portalId:'A',quantity:1}))).toBe('ITEM_PROTECTED');
+    expect(rejectedCode(()=>doCommand(world,player,'drop',undefined,{type:'pulse',level:8,quantity:0}))).toBe('INVALID_INPUT');
+    expect(doCommand(world,player,'drop',undefined,{type:'pulse',level:8,quantity:1}).world.droppedItems).toHaveLength(1);
+    player.movement={from:player,to:{x:11000,y:10000},startAt:0,arriveAt:1000};
+    expect(rejectedCode(()=>doCommand(world,player,'drop',undefined,{type:'pulse',level:8,quantity:1}))).toBe('MOVING');
+    expect(world.droppedItems).toBeUndefined();
+  });
+
+  it('糖块回收与使用共享收益、等级、满能量和冷却限制', () => {
+    const {world,player}=joined();player.xm=1200;
+    const used=doCommand(world,player,'sugar',undefined,{level:1});
+    const recycled=doCommand(world,player,'recycle',undefined,{type:'cube',level:1,quantity:1});
+    expect(recycled.player).toEqual(used.player);
+    expect(recycled.result).toMatchObject({restored:1000,wasted:0});
+    expect(rejectedCode(()=>doCommand(recycled.world,recycled.player,'sugar',undefined,{level:1},999))).toBe('COOLDOWN');
+    expect(rejectedCode(()=>doCommand(used.world,used.player,'recycle',undefined,{type:'cube',level:1,quantity:1},999))).toBe('COOLDOWN');
+    player.xm=3000;
+    expect(rejectedCode(()=>doCommand(world,player,'recycle',undefined,{type:'cube',level:1,quantity:1}))).toBe('ALREADY_FULL');
+    player.xm=1200;
+    expect(rejectedCode(()=>doCommand(world,player,'recycle',undefined,{type:'cube',level:8,quantity:1}))).toBe('LEVEL_LOCKED');
+  });
   it('新手三点形成首场，动作成本2100XM且AP为7964', () => {
     let {world, player} = joined();
     let cost = 0, now = 0;
@@ -273,12 +387,18 @@ describe('beta-v1 纯规则引擎', () => {
     expect(wounded.result).toMatchObject({destroyed: 0, links: 0, fields: 0});
     expect(wounded.world.links).toHaveLength(6);
     expect(wounded.world.fields).toHaveLength(2);
+    expect(wounded.world.battleEvents?.filter(event => event.kind === 'field-destroyed')).toEqual([]);
     wounded.world.portals.A.resonators[0]!.energy = 1;
     const broken = doCommand(wounded.world, wounded.player, 'attack', undefined, {level: 1}, 1000);
     expect(broken.world.portals.A.resonators.filter(Boolean)).toHaveLength(7);
     expect(broken.result).toMatchObject({destroyed: 1, links: 2, fields: 1});
     expect(broken.world.links.map(link => link.id)).toEqual(['B|C', 'D|E', 'E|F', 'D|F']);
     expect(broken.world.fields.map(field => field.id)).toEqual(['D|E|F']);
+    expect(broken.world.battleEvents?.filter(event => event.kind === 'field-destroyed')).toEqual([
+      {id: expect.any(String), at: 1000, faction: 'red', actor: '玩家', kind: 'field-destroyed', portals: ['A', 'B', 'C'], amount: 1},
+    ]);
+    const again = doCommand(broken.world, broken.player, 'attack', undefined, {level: 1}, 2000);
+    expect(again.world.battleEvents?.filter(event => event.kind === 'field-destroyed')).toHaveLength(1);
     expect(world.links).toHaveLength(6);
   });
 
@@ -308,7 +428,7 @@ describe('beta-v1 纯规则引擎', () => {
   it('连线只按起点八槽射程裁定，失败不扣Key或XM', () => {
     const {world, player} = joined();
     player.inventory.push({type: 'key', level: 1, portalId: 'B', quantity: 1});
-    world.portals.B.x = 30_000;
+    world.portals.B.x = world.portals.A.x + RULES.minimumPortalRangeCm + 1;
     for (const id of ['A', 'B']) {
       world.portals[id].faction = 'red';
       world.portals[id].resonators = Array.from({length: 8}, (_, index) => ({level: 1, energy: 1000, owner: 'p',
@@ -370,7 +490,31 @@ describe('beta-v1 纯规则引擎', () => {
     expect(world.portals.A.faction).toBe('red');
   });
 
-  it('移动改道、取消与离线XM恢复按整数毫秒处理', () => {
+  it.each([2999,3000,3001])('操作距离%d厘米按30米含边界判定', distance => {
+    const {world,player}=joined(); player.x+=distance;
+    if(distance<=3000) expect(doCommand(world,player,'hack','A').result.type).toBe('hack');
+    else expect(rejectedCode(()=>doCommand(world,player,'hack','A'))).toBe('OUT_OF_RANGE');
+  });
+
+  it('缩小操作距离后，旧40米偏移的脚仍按真实武器射程命中',()=>{
+    const {world,player}=joined();
+    const enemy=world.portals.B; enemy.x=player.x+7800; enemy.y=player.y; enemy.faction='blue';
+    enemy.resonators[0]={level:1,energy:1000,owner:'enemy',x:enemy.x-4000,y:enemy.y,generation:'legacy',nextDecayAt:86400000};
+    const result=doCommand(world,player,'attack',undefined,{level:1});
+    expect(result.world.portals.B.resonators[0]!.energy).toBeLessThan(1000);
+  });
+
+  it('移动改道从当前权威坐标开始，取消后不再继续前进',()=>{
+    const {world,player}=joined();
+    const first=doCommand(world,player,'move',undefined,{x:22000,y:10000});
+    const reroute=doCommand(first.world,first.player,'move',undefined,{x:16000,y:22000},5000);
+    expect(reroute.player.movement).toMatchObject({from:{x:16000,y:10000},to:{x:16000,y:22000},startAt:5000,arriveAt:15000});
+    const stopped=doCommand(reroute.world,reroute.player,'move-cancel',undefined,{},7500);
+    expect(stopped.player).toMatchObject({x:16000,y:13000,movement:null});
+    expect(refreshPlayer(stopped.player,20000)).toMatchObject({x:16000,y:13000,movement:null});
+  });
+
+  it('移动改道、取消与离线XM恢复按整数毫秒处理' , () => {
     let {world, player} = joined();
     player.xm = 0;
     const move = doCommand(world, player, 'move', undefined, {x: 22000, y: 10000});
@@ -417,6 +561,12 @@ describe('高阶掉落、逐级礼包与公共战报', () => {
     expect((out.result.levelRewards as {level:number}[]).map(r=>r.level)).toEqual([2,3]);
     for(const level of [2,3])expect(out.player.inventory.filter(i=>i.level===level).reduce((n,i)=>n+i.quantity,0)).toBe(50);
     expect(out.world.battleEvents?.filter(e=>e.kind==='attack')).toHaveLength(6);
+    expect(out.world.battleEvents?.filter(e=>e.kind==='field-destroyed')).toMatchObject([
+      {faction:'red',actor:'玩家',portals:['A','B','C'],amount:1},
+      {faction:'red',actor:'玩家',portals:['D','E','F'],amount:1},
+    ]);
+    expect(world.fields).toHaveLength(2);
+    expect(world.battleEvents).toBeUndefined();
   });
   it('计分战报只记本次收益且最多保存40条，失败不写战报',()=>{
     const world=linkedWorld(),{player}=joined();

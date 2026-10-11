@@ -25,6 +25,7 @@
     9000,
     10000
   ],
+  "minimumPortalRangeCm": 32000,
   "rangeCm": [
     0,
     109,
@@ -96,7 +97,7 @@
   "muSqrtDivisorMeters": 20,
   "minimumFieldMu": 1,
   "largeFieldThresholdCm": 100000,
-  "interactionRangeCm": 4000,
+  "interactionRangeCm": 3000,
   "linkXmCost": 250,
   "checkpointMs": 300000,
   "pointScorePerCheckpoint": 10,
@@ -123,7 +124,7 @@
     "remoteDenominatorCmPerLevel": 50000000, "remoteMinimumPercent": 50,
     "apPerDeliveredXm": 100},
   "items": {"cubeRecoveryPerLevel": 1000, "cubeCooldownMs": 1000,
-    "recycleResonatorAndPulsePerLevel": 20, "recycleCubePerLevel": 1000,
+    "recycleResonatorAndPulsePerLevel": 20,
     "recycleKey": 20, "recycleMod": 40},
   "mods": {"slots": 4, "perPlayerPerPortal": 2, "shieldReductionPercent": 30,
     "maxDamageReductionPercent": 95, "firstHeatSinkCooldownPercent": 80,
@@ -132,7 +133,7 @@
   "link": {"maxOutgoing": 8, "cooldownMs": 2000, "minimumResonators": 8},
   "newPortals": {
     "maxTotal": 200, "maxPerDistrict": 12,
-    "minApprovedSpacingCm": 2000, "cityBoundaryClearanceCm": 15000,
+    "minApprovedSpacingCm": 500, "cityBoundaryClearanceCm": 15000,
     "waterShoreClearanceCm": 12000, "railCenterlineClearanceCm": 8000,
     "applicationTtlMs": 604800000, "submissionWindowMs": 604800000,
     "maxSubmissionsPerWindow": 2, "maxPendingPerAccount": 1,

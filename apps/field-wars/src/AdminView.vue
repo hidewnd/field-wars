@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import {requestId as newRequestId} from './crypto';
+import {appPath} from './paths';
 import { ApiError, errorMessage, get, post } from './api';
 
 interface AdminState { applications: Record<string, unknown>[]; complaints: Record<string, unknown>[]; audit: Record<string, unknown>[]; world: {seq:string;season:{id:number;startAt:number;endAt:number};scores:Record<string,number>;maintenance:boolean;announcement:string;nextCheckpoint:number}; accounts: Record<string, unknown>[]; rules?: Record<string,unknown>; publicsummary?:{portalCount:number;linkCount:number;fieldCount:number}; csrfToken?: string; commandEpoch?: string }
@@ -45,7 +46,7 @@ onMounted(refresh);
 
 <template>
   <main class="admin-page">
-    <header class="admin-top"><a href="/">← 返回城市</a><h1>场域战争 · 运营</h1><div v-if="state" class="inline-controls"><button type="button" @click="refresh">刷新</button><button type="button" :disabled="busy" @click="logout">退出管理</button></div></header>
+    <header class="admin-top"><a :href="appPath('/')">← 返回城市</a><h1>场域战争 · 运营</h1><div v-if="state" class="inline-controls"><button type="button" @click="refresh">刷新</button><button type="button" :disabled="busy" @click="logout">退出管理</button></div></header>
     <form v-if="!state" class="admin-login" @submit.prevent="login"><h2>管理员登录</h2><p>使用部署时生成的管理员密码。</p><label>密码<input v-model="password" type="password" autocomplete="current-password" required /></label><button type="submit" class="primary-action" :disabled="busy">登录</button></form>
     <template v-else>
       <div class="admin-grid">

@@ -12,6 +12,7 @@ const emit = defineEmits<{
 const tab = ref<'point'|'resources'|'links'>('point');
 defineExpose({ openLinks: () => { tab.value = 'links'; } });
 const level = ref(1);
+const deployLevel = ref(0);
 const slot = ref(0);
 const amount = ref(1000);
 const modType = ref<'shield'|'heatsink'|'multihack'>('shield');
@@ -23,7 +24,7 @@ const position = computed(() => {
 });
 const distanceCm = computed(() => Math.hypot(props.portal.x - position.value.x, props.portal.y - position.value.y));
 const distance = computed(() => Math.ceil(distanceCm.value / 100));
-const near = computed(() => distanceCm.value <= 4000 && !props.player.movement);
+const near = computed(() => distanceCm.value <= RULES.interactionRangeCm && !props.player.movement);
 const own = computed(() => props.portal.faction === props.player.faction && !!props.player.faction);
 const keys = computed(() => props.player.inventory.filter(i => i.type === 'key' && i.portalId === props.portal.id).reduce((count, item) => count + item.quantity, 0));
 const keyItem = computed(() => props.player.inventory.find(i => i.type === 'key' && i.portalId === props.portal.id));
@@ -31,6 +32,14 @@ const maxLevel = computed(() => levelForAp(props.player.ap));
 const portalLevelValue = computed(() => portalLevel(props.portal));
 const range = computed(() => Math.round(portalRange(props.portal) / 100));
 const filled = computed(() => props.portal.resonators.filter(Boolean).length);
+const selectedResonator = computed(() => props.portal.resonators[slot.value]);
+const slotItems = computed(() => {
+  if ((!own.value && props.portal.faction) || !props.player.faction || (selectedResonator.value && filled.value !== 8)) return [];
+  return props.player.inventory.filter(item => item.type === 'resonator' && item.quantity > 0 && item.level <= maxLevel.value
+    && item.level > (selectedResonator.value?.level ?? 0)
+    && props.portal.resonators.filter(r => r?.owner === props.player.id && r.level === item.level).length < RULES.resonators.quotaPerPlayerPerPortal[item.level])
+    .sort((a,b) => b.level - a.level);
+});
 const modFilled = computed(() => props.portal.mods.filter(Boolean).length);
 const ownItems = computed(() => props.player.inventory.filter(i => i.quantity > 0 && (i.type !== 'key' || i.portalId === props.portal.id)));
 const modNames = { shield: '护盾', heatsink: '散热片', multihack: '多次 Hack' };
@@ -52,7 +61,7 @@ const linkTargets = computed(() => {
 const linkBlocked = computed(() => {
   const origin=props.portal;
   if (props.player.movement) return '移动中，请停止移动后连线';
-  if (!origin || Math.hypot(origin.x-props.player.x,origin.y-props.player.y)>RULES.interactionRangeCm) return '请前往当前据点40米内连线';
+  if (!origin || Math.hypot(origin.x-props.player.x,origin.y-props.player.y)>RULES.interactionRangeCm) return `请前往当前据点${RULES.interactionRangeCm / 100}米内连线`;
   if (props.player.xm<RULES.linkXmCost) return `连线需要 ${RULES.linkXmCost} XM`;
   const seconds=Math.ceil(((props.player.cooldowns.link ?? 0)-props.now)/1000);
   return seconds>0 ? `连线冷却 ${seconds} 秒` : '';
@@ -68,7 +77,7 @@ function act(kind: string, payload: Record<string, unknown> = {}) { emit('action
       <div><h2>{{ portal.name }}</h2><p><span class="faction-indicator" :class="portal.faction ?? 'neutral'">{{ portal.faction === 'red' ? '●' : portal.faction === 'green' ? '◆' : portal.faction === 'blue' ? '▲' : '○' }}</span>{{ portal.faction === 'red' ? '红方' : portal.faction === 'green' ? '绿方' : portal.faction === 'blue' ? '蓝方' : '中立' }} · L{{ portalLevelValue }} · {{ distance }} 米</p></div>
       <button type="button" class="icon-button" aria-label="关闭详情" @click="emit('close')">×</button>
     </header>
-    <div class="distance-line">{{ portal.districtId }} <span>{{ near ? '可交互' : '距交互范围较远' }}</span></div>
+    <div class="distance-line">{{ portal.districtId }} <span>{{ player.movement ? '移动中，请先停止' : near ? '可交互' : '距交互范围较远' }}</span></div>
     <nav class="tabs" aria-label="据点信息">
       <button type="button" :class="{active:tab==='point'}" @click="tab='point'">据点</button>
       <button type="button" :class="{active:tab==='resources'}" @click="tab='resources'">资源</button>
@@ -84,20 +93,26 @@ function act(kind: string, payload: Record<string, unknown> = {}) { emit('action
             </button>
           </div>
           <p class="selected-slot">已选第 {{ slot + 1 }} 槽 · {{ portal.resonators[slot] ? `L${portal.resonators[slot]?.level}，${portal.resonators[slot]?.energy} 能量` : '空槽' }}</p>
+          <p v-if="selectedResonator" class="selected-slot">部署人：{{ selectedResonator.ownerName ?? (selectedResonator.owner === player.id ? player.name : '未知玩家') }}</p>
+          <div class="slot-equipment" aria-label="选中槽位可用装备">
+            <h4>{{ selectedResonator ? '可升级的脚' : '可部署的脚' }}</h4>
+            <button v-for="item in slotItems" :key="item.level" type="button" :disabled="busy || !near || player.xm < item.level * RULES.resonators.xmCostPerLevel" @click="act(selectedResonator ? 'upgrade' : 'deploy',{level:item.level,slot})">{{ selectedResonator ? '升级至' : '部署' }} L{{ item.level }} <small>×{{ item.quantity }} · {{ item.level * RULES.resonators.xmCostPerLevel }} XM</small></button>
+            <p v-if="!slotItems.length" class="muted">{{ selectedResonator && own && filled !== 8 ? '填满友方据点八个槽位后可升级' : '背包中暂无符合等级与配额的脚' }}</p>
+          </div>
         </section>
         <section class="panel-section actions-section compact-section">
           <div class="section-title"><h3>快捷行动</h3><span v-if="keys">本点 Key {{ keys }} 把</span></div>
           <button v-if="!near" type="button" class="primary-action go-button" :disabled="busy" @click="act('move',{x:portal.x,y:portal.y})">前往据点</button>
           <div class="quick-actions">
             <button type="button" :disabled="busy || !near || hackWait>0 || inventoryCount(player.inventory)>=500" @click="act('hack')">Hack <small>{{ hackWait ? `${hackWait} 秒后可用` : '获取资源' }}</small></button>
-            <button type="button" :disabled="busy || !near || filled===8" @click="act('deploy-all',{level})">批量部署 <small>使用 L{{ level }} 脚</small></button>
+            <button type="button" :disabled="busy || !near || filled===8 || (!!portal.faction && !own)" @click="act('deploy-all',deployLevel ? {level:deployLevel} : {})">批量部署 <small>{{ deployLevel ? `固定 L${deployLevel} 脚` : '按背包等级从高到低' }}</small></button>
             <button type="button" :disabled="busy || !own || rechargeWait>0 || !filled || (!near && !keys)" @click="act('recharge',{amount})">全部充能 <small>{{ rechargeWait ? `${rechargeWait} 秒后可用` : '恢复脚能量' }}</small></button>
             <button type="button" :disabled="busy" @click="tab='links'">连线 <small>查看可连据点</small></button>
           </div>
-          <div class="level-picker"><label for="item-level">装备等级</label><select id="item-level" v-model.number="level"><option v-for="n in maxLevel" :key="n" :value="n">L{{ n }}</option></select></div>
+          <div class="level-picker"><label for="deploy-level">批量部署等级</label><select id="deploy-level" v-model.number="deployLevel"><option :value="0">自动 · 从高到低</option><option v-for="n in maxLevel" :key="n" :value="n">固定 L{{ n }}</option></select></div>
+          <div class="level-picker"><label for="item-level">攻击器等级</label><select id="item-level" v-model.number="level"><option v-for="n in maxLevel" :key="n" :value="n">L{{ n }}</option></select></div>
           <button type="button" class="soft-action attack-button" :disabled="busy || !!player.movement || attackWait>0" @click="act('attack',{level})">{{ attackWait ? `脉冲攻击 · ${attackWait} 秒后可用` : `脉冲攻击 · L${level}` }}</button>
           <details class="advanced-actions"><summary>单槽操作与阵营协作</summary><div class="two-actions secondary-actions">
-            <button type="button" :disabled="busy || !near" @click="act(portal.resonators[slot] ? 'upgrade' : 'deploy',{level,slot})">{{ portal.resonators[slot] ? '升级选中脚' : '部署选中槽' }}</button>
             <button type="button" :disabled="busy || !player.faction" @click="act('marker',{portalId:portal.id})">标记据点</button>
           </div></details>
         </section>
@@ -137,6 +152,7 @@ function act(kind: string, payload: Record<string, unknown> = {}) { emit('action
 .resonator {width: 42px; height: 42px; font-size: 19px;}
 .resonator.filled {font-size: 13px;}
 .selected-slot {margin: 9px 0 0; color: #597492; font-size: 12px;}
+.slot-equipment{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}.slot-equipment h4{width:100%;margin:0 0 2px;font-size:12px;color:#597492}.slot-equipment button{border:1px solid #bfd1e9;border-radius:7px;padding:7px 9px;background:#f6faff;color:#164f9e;font-size:12px}.slot-equipment small{display:block;margin-top:3px;color:#6984a5}.slot-equipment p{font-size:12px;margin:0}
 .go-button {min-height: 40px; margin-bottom: 8px; font-size: 14px;}
 .quick-actions {display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;}
 .quick-actions button {min-width: 0; min-height: 56px; border: 1px solid #bfd1e9; border-radius: 8px; background: #f6faff; color: #164f9e; font-weight: 700;}

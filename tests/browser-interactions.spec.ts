@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import map from '../maps/beta-v1.json' with { type: 'json' };
 import type { Portal, Snapshot } from '../shared/types';
+import {applyCommand, GameError} from '../shared/engine';
+import {randomUUID} from 'node:crypto';
 
 test.use({ channel: process.env.PLAYWRIGHT_CHANNEL ?? undefined, viewport: { width: 1440, height: 960 } });
 const source = map.portals.filter(p => p.role === 'core').slice(0, 2);
@@ -12,7 +14,7 @@ function fixture(): Snapshot {
   for (const portal of portals.filter(p => source.some(s => s.id === p.id))) {
     portal.faction = 'blue';
     portal.resonators = Array.from({ length: 8 }, (_, slot) => ({
-      level: 1, energy: slot === 2 ? 500 : 1000, owner: 'demo', generation: `g-${slot}`,
+      level: 1, energy: slot === 2 ? 500 : 1000, owner: 'demo', ownerName:'探索者', generation: `g-${slot}`,
       x: portal.x + Math.round(Math.cos(slot * Math.PI / 4) * 1600),
       y: portal.y + Math.round(Math.sin(slot * Math.PI / 4) * 1600), nextDecayAt: now + 86400000,
     }));
@@ -43,6 +45,121 @@ async function center(page: Page, id = origin.id) {
   });
 }
 
+// 浏览器通过真实规则引擎更新内存快照，用于核对界面提交参数与操作后的显示。
+async function gameActions(page: Page, state: Snapshot) {
+  const submitted:{type:string;payload:Record<string,unknown>}[]=[];
+  await page.route(url=>/\/api\/(faction|account\/(rename|guide-read)|inventory\/(drop|pickup|recycle)|portals\/[^/]+\/(deploy|deploy-all|upgrade))$/.test(url.pathname),async route=>{
+    const path=new URL(route.request().url()).pathname.split('/');
+    const type=path.at(-1)!,payload=route.request().postDataJSON().payload;
+    submitted.push({type,payload});
+    try {
+      const out=applyCommand(state.world,state.player,{type,payload,portalId:path.includes('portals')?path.at(-2):undefined},{now:Date.now(),id:randomUUID,random:()=>.5,map:state.map});
+      out.world.seq=String(BigInt(state.world.seq)+1n);
+      state.world=out.world;state.player=out.player;state.serverTime=Date.now();
+      await route.fulfill({json:{result:out.result,player:out.player,committedSeq:out.world.seq}});
+    }catch(error){if(!(error instanceof GameError))throw error;await route.fulfill({status:400,json:{error:{code:error.code,message:error.message}}});}
+  });
+  return submitted;
+}
+
+test('侵入攻击位于第一项，二级菜单明确选择等级并禁用超等级攻击器',async({page})=>{
+  const state=fixture();state.player.ap=0;state.player.xm=3000;
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(['error','warning'].includes(message.type()))errors.push(message.text())});
+  let attack:unknown;
+  await mount(page,state);
+  await page.route('**/api/attacks',route=>{attack=route.request().postDataJSON().payload;return route.fulfill({json:{result:{type:'attack'},committedSeq:'2'}})});
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  for(const [size,width,height] of [['desktop',1440,960],['mobile',390,844]] as const){
+    await page.setViewportSize({width,height});
+    await page.locator(`[data-portal-id="${origin.id}"]`).click({button:'right'});
+    const menu=page.getByRole('menu',{name:'地图快捷操作'});
+    await expect(menu.getByRole('menuitem').first()).toHaveText(/侵入攻击/);
+    await menu.getByRole('menuitem',{name:/侵入攻击/}).click();
+    expect(attack).toBeUndefined();
+    const submenu=page.getByRole('menu',{name:'选择攻击道具'});
+    await expect(submenu.getByRole('menuitem',{name:/L8/})).toBeDisabled();
+    await expect(submenu.getByRole('menuitem',{name:/L1/})).toBeEnabled();
+    if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/attack-${size}.png`});
+    if(size==='desktop')await page.keyboard.press('Escape');
+    else await submenu.getByRole('menuitem',{name:/L1/}).click();
+  }
+  await expect.poll(()=>attack).toEqual({level:1});
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('自动批量部署高等级优先且可切换固定等级，槽位显示真实部署人',async({page})=>{
+  const state=fixture();
+  state.world.portals[origin.id].faction=null;state.world.portals[origin.id].resonators=Array(8).fill(null);
+  state.player.inventory=[{type:'resonator',level:8,quantity:3},{type:'resonator',level:6,quantity:3},{type:'resonator',level:1,quantity:8}];
+  await mount(page,state);const submitted=await gameActions(page,state);
+  await page.getByRole('button',{name:/批量部署/}).click();
+  await expect.poll(()=>state.world.portals[origin.id].resonators.map(r=>r?.level)).toEqual([8,6,6,1,1,1,1,1]);
+  expect(submitted[0]).toEqual({type:'deploy-all',payload:{}});
+  await expect(page.getByText('部署人：探索者')).toBeVisible();
+  state.world.portals[origin.id].resonators=Array(8).fill(null);state.world.portals[origin.id].version++;
+  state.player.inventory=[{type:'resonator',level:2,quantity:8},{type:'resonator',level:8,quantity:1}];
+  await page.reload();
+  await page.getByLabel('批量部署等级').selectOption('2');
+  await page.getByRole('button',{name:/批量部署/}).click();
+  await expect.poll(()=>state.world.portals[origin.id].resonators.filter(Boolean).map(r=>r?.level)).toEqual([2,2,2,2]);
+  expect(submitted.at(-1)).toEqual({type:'deploy-all',payload:{level:2}});
+});
+
+test('选择单槽列出背包可升级脚，升级后刷新等级与部署人，桌面手机均可操作',async({page})=>{
+  const state=fixture();state.player.ap=4000;state.player.inventory=[{type:'resonator',level:3,quantity:2},{type:'resonator',level:2,quantity:2},{type:'resonator',level:8,quantity:1}];
+  state.world.portals[origin.id].resonators.forEach(r=>{if(r){r.owner='other';r.ownerName='青岚'}});
+  await mount(page,state);await gameActions(page,state);
+  await expect(page.getByText('部署人：青岚')).toBeVisible();
+  await expect(page.getByRole('button',{name:/升级至 L8/})).toHaveCount(0);
+  await page.getByRole('button',{name:/第2槽 L1/}).click();
+  await page.getByRole('button',{name:/升级至 L3/}).click();
+  await expect(page.getByRole('button',{name:/第2槽 L3/})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByText('部署人：探索者')).toBeVisible();
+  await page.getByRole('button',{name:/第1槽 L1/}).click();
+  await expect(page.getByText('部署人：青岚')).toBeVisible();
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/slot-desktop.png`});
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:/升级至 L2/}).click();
+  await expect(page.getByRole('button',{name:/第1槽 L2/})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/slot-mobile.png`});
+});
+
+test('背包丢弃落地，其他玩家通过地图拾取，回收返回能量',async({page})=>{
+  const state=fixture();state.player.inventory=[{type:'pulse',level:1,quantity:2},{type:'cube',level:1,quantity:2}];
+  await mount(page,state);await gameActions(page,state);
+  page.on('dialog',dialog=>dialog.accept());
+  await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:/背包/}).click();
+  await page.locator('.item-row').filter({hasText:'脉冲器'}).getByRole('button',{name:'丢弃'}).click();
+  await expect.poll(()=>state.world.droppedItems?.length).toBe(1);
+  await expect(page.locator('.toast')).toContainText('已丢弃');
+  const droppedBy=state.player.id;
+  state.player={...state.player,id:'picker',name:'拾取者',faction:'green',inventory:[],xm:9000,version:0};
+  await page.reload();
+  await page.locator('[data-drop-position] rect').click();
+  const pickup=page.getByRole('region',{name:'拾取地面道具'});
+  await expect(pickup).toContainText('脉冲器 L1 ×1');
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/drop-desktop.png`});
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  await page.setViewportSize({width:390,height:844});
+  await expect(pickup).toBeVisible();
+  await expect(page.locator('.topbar')).toHaveCount(1);
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/drop-mobile.png`});
+  await pickup.getByRole('button',{name:'拾取',exact:true}).click();
+  await expect(page.locator('[data-drop-position]')).toHaveCount(0);
+  expect(state.player.id).not.toBe(droppedBy);
+  expect(state.player.inventory).toEqual([{type:'pulse',level:1,quantity:1}]);
+  await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:/背包/}).click();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/inventory-mobile.png`});
+  await page.getByRole('button',{name:'回收',exact:true}).click();
+  await expect(page.locator('.toast')).toContainText('已恢复 20 XM');
+  await expect(page.getByText('该分类暂无物品。前往据点 Hack 获取资源。')).toBeVisible();
+});
+
 test('PO边缘、脚节点和轻抖点击仅选择；拖动和取消不移动', async ({ page }) => {
   const dialogs: string[] = [], moves: string[] = [];
   page.on('dialog', async dialog => { dialogs.push(dialog.message()); await dialog.dismiss(); });
@@ -69,7 +186,7 @@ test('右键菜单区分空白和PO，基础操作保留且点击外部或Escape
   await page.mouse.click(p.x, p.y, { button: 'right' });
   const menu = page.getByRole('menu', { name: '地图快捷操作' });
   await expect(menu.getByRole('menuitem', { name: '入侵 Hack' })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: '当前位置攻击' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: '侵入攻击' })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: '申请新 PO' })).toBeVisible();
   await page.keyboard.press('Escape'); await expect(menu).toHaveCount(0);
   const box = await page.locator('svg.world-map').boundingBox();
@@ -92,7 +209,8 @@ test('右键攻击从玩家当前位置提交且PO入侵使用菜单目标', asy
   await page.route('**/api/attacks', route => { attack = route.request().postDataJSON().payload; return route.fulfill({ json: { result: { type: 'attack', hits: 1 }, committedSeq: '2' } }); });
   const p = await center(page, target.id);
   await page.mouse.click(p.x, p.y, { button: 'right' });
-  await page.getByRole('menuitem', { name: '当前位置攻击' }).click();
+  await page.getByRole('menuitem', { name: '侵入攻击' }).click();
+  await page.getByRole('menu', {name:'选择攻击道具'}).getByRole('menuitem', {name:/L8 脉冲器/}).click();
   await expect.poll(() => attack).toEqual({ level: 8 });
   await expect(page.locator('.toast')).toHaveText('操作成功');
   await page.route('**/api/portals/*/hack', route => { hackPath = route.request().url(); return route.fulfill({ json: { result: { type: 'hack', portalId: target.id, items: [], key: false, cost: 50, ap: 0, counterDamage: 0 }, committedSeq: '3' } }); });
@@ -253,6 +371,35 @@ test('手机长按打开菜单而不发移动命令', async ({ page }) => {
   expect(moves).toBe(0);expect(dialogs).toEqual([]);await cdp.detach();
 });
 
+test('领域场摧毁战报显示攻击者、三个顶点与MU，刷新和手机端均保留',async({page})=>{
+  const state=fixture(),third=map.portals.filter(p=>p.role==='core')[2];
+  const errors:string[]=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(['error','warning'].includes(message.type()))errors.push(message.text())});
+  await mount(page,state);
+  const feed=page.getByRole('region',{name:'实时战报'});
+  await expect(feed).toContainText('战场暂时平静');
+  state.world.battleEvents=[
+    {id:'attack',at:Date.now(),faction:'red',kind:'attack',actor:'赤羽',portals:[origin.id]},
+    {id:'destroyed',at:Date.now(),faction:'red',kind:'field-destroyed',actor:'赤羽',portals:[origin.id,target.id,third.id],amount:129},
+  ];
+  await page.reload();
+  await expect(page).toHaveTitle(/场域战争/);
+  const report=feed.getByRole('listitem').first();
+  await expect(report).toHaveText(new RegExp(`红方 · 赤羽 摧毁了领域场：${origin.name} / ${target.name} / ${third.name} · 129 MU`));
+  await expect(report.locator('span')).toHaveClass('red');
+  await expect(feed.getByText(/摧毁了领域场/)).toHaveCount(1);
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/field-destroyed-desktop.png`});
+  await page.setViewportSize({width:390,height:844});await page.reload();
+  await expect(report).toBeVisible();
+  await expect(report).toContainText('129 MU');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  expect(await report.evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/field-destroyed-mobile.png`});
+  expect(errors).toEqual([]);
+});
+
 test('侧栏可收起并记忆，首场引导移除，半透明战报显示真实事件',async({page})=>{
   const state=fixture();state.player.tutorial={};
   state.world.battleEvents=[
@@ -305,4 +452,94 @@ test('跨级礼包逐一弹窗，Hack收获随后展示；未知收据恢复仍�
   await page.keyboard.press('Escape');await expect(page.getByRole('dialog',{name:'晋升 L3 · 升级礼包'})).toBeVisible();
   await page.getByRole('button',{name:'继续探索'}).click();await expect(page.getByRole('dialog',{name:'入侵收获'})).toBeVisible();
   await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('账号中英文改名校验20字符，右上角及部署人同步，桌面手机布局正常',async({page})=>{
+  const state=fixture();await mount(page,state);const submitted=await gameActions(page,state);
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.getByRole('button',{name:'账号设置'}).click();
+  const account=page.getByRole('dialog',{name:'账号信息'}),input=account.getByLabel(/玩家名称/);
+  await input.fill('星'.repeat(21));
+  await expect(account.getByText('玩家名称最多 20 个字符')).toBeVisible();
+  await expect(account.getByRole('button',{name:'保存名称'})).toBeDisabled();
+  expect(submitted).toHaveLength(0);
+  const name='星河探索者WindABCDEFGHIJK';
+  expect([...name]).toHaveLength(20);
+  await input.fill(name);await account.getByRole('button',{name:'保存名称'}).click();
+  await expect(page.locator('.toast')).toContainText('玩家名称已更新');
+  await expect(page.getByRole('button',{name:'修改玩家名称'})).toHaveText(name);
+  await expect(account.getByRole('button',{name:'保存名称'})).toBeDisabled();
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/account-desktop.png`});
+  await page.setViewportSize({width:390,height:844});
+  await expect(input).toHaveValue(name);
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/account-mobile.png`});
+  await account.getByRole('button',{name:'关闭',exact:true}).click();
+  await expect(page.getByText(`部署人：${name}`)).toBeVisible();
+  await expect(page.getByRole('button',{name:'修改玩家名称'})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/name-mobile.png`});
+  await page.reload();
+  await expect(page.getByRole('button',{name:'修改玩家名称'})).toHaveText(name);
+  expect(submitted).toEqual([{type:'rename',payload:{name}}]);
+  expect(errors).toEqual([]);
+});
+
+test('老玩家可手动打开玩法说明，四章内容与L8申请指引，手机可滚动且关闭恢复焦点',async({page})=>{
+  await mount(page);await expect(page.getByRole('dialog',{name:'玩法说明'})).toHaveCount(0);
+  const open=page.getByRole('button',{name:/玩法说明/});await open.click();
+  const guide=page.getByRole('dialog',{name:'玩法说明'});
+  await expect(guide.getByRole('heading',{name:'连成三角，建立领域'})).toBeVisible();
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/guide-desktop.png`});
+  await guide.getByRole('button',{name:'核心参数'}).click();
+  await expect(guide.getByText('AP · 成长经验')).toBeVisible();
+  await expect(guide.getByText('MU · 领域计分值')).toBeVisible();
+  await guide.getByRole('button',{name:'常用操作'}).click();
+  await expect(guide.getByRole('heading',{name:'侵入攻击'})).toBeVisible();
+  await guide.getByRole('button',{name:'进阶与安全'}).click();
+  await expect(guide.getByText('L8 解锁')).toBeVisible();
+  await page.setViewportSize({width:390,height:844});
+  await expect(guide.getByRole('button',{name:'我知道了，开始探索'})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/guide-mobile.png`});
+  await guide.getByRole('button',{name:'核心参数'}).click();
+  await guide.getByText('MU · 领域计分值').scrollIntoViewIfNeeded();
+  await expect(guide.getByText('MU · 领域计分值')).toBeVisible();
+  await page.setViewportSize({width:1440,height:960});
+  await page.keyboard.press('Escape');await expect(guide).toHaveCount(0);await expect(open).toBeFocused();
+});
+
+test('新玩家保存恢复码并选阵营后自动展示说明，关闭已读随账号保存且刷新不再弹出',async({page})=>{
+  const state=fixture();state.player.faction=null;state.player.ap=0;state.player.xm=3000;state.player.inventory=[];
+  state.player.tutorial={quick_start_pending_at:state.serverTime};
+  let created=false;
+  await page.routeWebSocket('**/api/events',()=>{});
+  await page.route('**/api/session',r=>r.fulfill({json:{player:created?state.player:null,csrfToken:'test',commandEpoch:'test'}}));
+  await page.route('**/api/anonymous-sessions',r=>{created=true;return r.fulfill({json:{player:state.player,recoveryCode:'LOCAL-TEST-CODE',csrfToken:'test',commandEpoch:'test'}})});
+  await page.route('**/api/world/snapshot',r=>r.fulfill({json:state}));
+  await page.route('**/api/po-applications/mine',r=>r.fulfill({json:{applications:[]}}));
+  await page.route('**/api/social',r=>r.fulfill({json:{markers:[],alerts:[]}}));
+  const submitted=await gameActions(page,state);
+  await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:5174/');
+  await page.getByRole('button',{name:'创建匿名身份'}).click();
+  const guide=page.getByRole('dialog',{name:'玩法说明'});
+  await expect(page.getByRole('dialog',{name:'保存恢复码'})).toBeVisible();
+  await expect(guide).toHaveCount(0);
+  await page.getByRole('button',{name:'我已保存'}).click();
+  await expect(guide).toHaveCount(0);
+  await page.locator('.faction-options').getByRole('button',{name:/蓝方/}).click();
+  await expect(guide).toBeVisible();
+  await page.reload();await expect(guide).toBeVisible();
+  await guide.getByRole('button',{name:'我知道了，开始探索'}).click();
+  await expect(guide).toHaveCount(0);
+  expect(state.player.tutorial.quick_start_pending_at).toBeUndefined();
+  expect(state.player.tutorial.quick_start_seen_at).toBeDefined();
+  expect(submitted.map(item=>item.type)).toEqual(['faction','guide-read']);
+  await page.evaluate(()=>localStorage.clear());await page.reload();
+  await expect(page.getByRole('button',{name:'账号设置'})).toBeVisible();
+  await expect(guide).toHaveCount(0);
+  await page.getByRole('button',{name:/玩法说明/}).click();await expect(guide).toBeVisible();
+  await guide.getByRole('button',{name:'关闭玩法说明'}).click();await expect(guide).toHaveCount(0);
+  expect(submitted.map(item=>item.type)).toEqual(['faction','guide-read']);
 });

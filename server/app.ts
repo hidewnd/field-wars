@@ -67,7 +67,7 @@ export async function buildApp(config:Config) {
   const row=(await store.pool.query('SELECT result FROM command_receipts WHERE actor=$1 AND request_id=$2',[s.id,request.params.id])).rows[0];
   if(!row)throw new GameError('NOT_FOUND','尚未找到已提交结果，可使用原请求重试');return row.result;
  });
- const routes:[string,string][]=[['/api/faction','faction'],['/api/moves','move'],['/api/moves/cancel','move-cancel'],['/api/attacks','attack'],['/api/items/sugar/use','sugar'],['/api/inventory/recycle','recycle'],['/api/links','link'],['/api/links/preview','link-preview'],...['hack','deploy','deploy-all','upgrade','recharge','mods'].map(action=>[`/api/portals/:id/${action}`,action==='mods'?'mod':action] as [string,string])];
+ const routes:[string,string][]=[['/api/account/rename','rename'],['/api/account/guide-read','guide-read'],['/api/faction','faction'],['/api/moves','move'],['/api/moves/cancel','move-cancel'],['/api/attacks','attack'],['/api/items/sugar/use','sugar'],['/api/inventory/recycle','recycle'],['/api/inventory/drop','drop'],['/api/inventory/pickup','pickup'],['/api/links','link'],['/api/links/preview','link-preview'],...['hack','deploy','deploy-all','upgrade','recharge','mods'].map(action=>[`/api/portals/:id/${action}`,action==='mods'?'mod':action] as [string,string])];
  for(const [path,type] of routes)app.post(path,async request=>{
   const session=await auth.protect(request);const body=envelope(request);
   if(((request.params as {id?:string}).id || type==='link') && body.targetVersion===undefined)throw new GameError('INVALID_INPUT','需要当前据点版本');

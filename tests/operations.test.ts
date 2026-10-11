@@ -93,12 +93,12 @@ suite('独立 PostgreSQL 的运营与阵营功能',()=>{
     expect(audits.rowCount).toBe(1);
   });
 
-  it('新 PO 间距严格 20 米：1999 厘米审批拒绝，2000 厘米审批通过',async()=>{
+  it('新 PO 间距严格 5 米：499 厘米审批拒绝，500 厘米审批通过',async()=>{
     const a=await session(),near=await session(),edge=await session();
     await levelEight(a);await levelEight(near);await levelEight(edge);
     const first=await apply(a,20_000,20_000,'间距原点');
-    const tooNear=await apply(near,21_999,20_000,'相距不足');
-    const exact=await apply(edge,22_000,20_000,'相距达标');
+    const tooNear=await apply(near,20_499,20_000,'相距不足');
+    const exact=await apply(edge,20_500,20_000,'相距达标');
     for(const response of [first,tooNear,exact])expect(response.statusCode,response.body).toBe(200);
     const operator=await admin();
     const review=async(id:string)=>adminCommand(operator,`/api/admin/po-applications/${id}/review`,{decision:'approve',reason:'复核冻结地图点距'});
@@ -109,6 +109,13 @@ suite('独立 PostgreSQL 的运营与阵营功能',()=>{
     const allowed=await review(exact.json().result.application.id);
     expect(allowed.statusCode,allowed.body).toBe(200);
     expect((await pool.query("SELECT id FROM portals WHERE id LIKE 'PO-N-%'")).rowCount).toBe(2);
+    const submitNear=await session(),submitEdge=await session();
+    await levelEight(submitNear);await levelEight(submitEdge);
+    const rejectedSubmission=await apply(submitNear,20_000,20_499,'申请过近');
+    expect(rejectedSubmission.statusCode).toBe(409);
+    expect(rejectedSubmission.json().error.code).toBe('PO_SPACING');
+    const allowedSubmission=await apply(submitEdge,20_000,20_500,'申请边界');
+    expect(allowedSubmission.statusCode,allowedSubmission.body).toBe(200);
   });
 
   it('申请资格及城区/全城名额计入待审，并允许本人撤回释放名额',async()=>{

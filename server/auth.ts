@@ -53,7 +53,7 @@ export class Auth {
 
   private cookie(req: FastifyRequest, reply: FastifyReply, token: string, admin: boolean): void {
     reply.setCookie(admin ? ADMIN_COOKIE : PLAYER_COOKIE, token, {
-      path: '/', httpOnly: true, secure: this.config.cookieSecure && req.headers.origin !== this.config.lanOrigin, sameSite: 'strict',
+      path: '/', httpOnly: true, secure: this.config.cookieSecure && req.headers.origin === this.config.origin, sameSite: 'strict',
       // 服务端按30天空闲期续期；浏览器保留凭证更久，避免活跃用户被固定Cookie寿命截断。
       maxAge: admin ? Math.floor(ADMIN_TTL / 1000) : PLAYER_COOKIE_MAX_AGE,
     });

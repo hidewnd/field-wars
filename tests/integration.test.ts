@@ -85,6 +85,61 @@ function fullPortal(id:string,x:number,y:number,faction:'red'|'green',owner:stri
 }
 
 suite('独立 PostgreSQL 的 HTTP 集成验收', () => {
+  it('账号改名与新手已读持久化，改名重放不重复推进，重启后名称与脚署名一致', async () => {
+    const owner=await createSession(),other=await createSession();
+    await chooseFaction(owner);
+    const point=fullPortal('name-test',10000,10000,'red',owner.player.id);
+    await replacePortalScene([point]);
+    const before=await snapshot(owner),body=envelope(before,{name:'星河Wind'});
+    expect(before.player.tutorial.quick_start_pending_at).toBeDefined();
+    const renamed=await command(owner,'/api/account/rename',body);
+    expect(renamed.statusCode,renamed.body).toBe(200);
+    const replay=await command(owner,'/api/account/rename',body);
+    expect(replay.statusCode,replay.body).toBe(200);
+    expect(replay.json()).toEqual(renamed.json());
+    const after=await snapshot(owner);
+    expect(after.player).toMatchObject({name:'星河Wind',id:owner.player.id,inventory:before.player.inventory,ap:before.player.ap});
+    expect(after.world.portals[point.id].resonators.every(r=>r?.ownerName==='星河Wind')).toBe(true);
+    expect((await snapshot(other)).player.name).toBe(other.player.name);
+    const invalid=await command(owner,'/api/account/rename',envelope(after,{name:'星'.repeat(21)}));
+    expect(invalid.statusCode).toBe(409);
+    expect(invalid.json().error.code).toBe('INVALID_INPUT');
+    const read=await command(owner,'/api/account/guide-read',envelope(await snapshot(owner),{}));
+    expect(read.statusCode,read.body).toBe(200);
+    await app.close();
+    app=await buildApp({databaseUrl:databaseUrl!,secret,adminPassword,origin,cookieSecure:false,port:0,host:'127.0.0.1'});
+    const restored=await snapshot(owner);
+    expect(restored.player.name).toBe('星河Wind');
+    expect(restored.player.tutorial.quick_start_pending_at).toBeUndefined();
+    expect(restored.player.tutorial.quick_start_seen_at).toBeDefined();
+    expect(restored.world.portals[point.id].resonators[0]?.ownerName).toBe('星河Wind');
+  });
+
+  it('地面道具与背包原子持久化，重放丢弃不重复，跨玩家并发拾取只成功一次且重启保留', async () => {
+    const owner=await createSession(),alice=await createSession(),bob=await createSession();
+    await chooseFaction(owner);await chooseFaction(alice,'blue');await chooseFaction(bob,'green');
+    for(const session of [owner,alice,bob])await setPlayer(session,p=>{p.x=10000;p.y=10000;p.inventory=session===owner?[{type:'pulse',level:1,quantity:2}]:[]});
+    const before=await snapshot(owner),body=envelope(before,{type:'pulse',level:1,quantity:1});
+    const dropped=await Promise.all([command(owner,'/api/inventory/drop',body),command(owner,'/api/inventory/drop',body)]);
+    dropped.forEach(reply=>expect(reply.statusCode,reply.body).toBe(200));
+    expect(dropped[0].json()).toEqual(dropped[1].json());
+    const dropId=dropped[0].json().result.drop.id;
+    expect((await snapshot(owner)).world.droppedItems).toHaveLength(1);
+    await app.close();
+    app=await buildApp({databaseUrl:databaseUrl!,secret,adminPassword,origin,cookieSecure:false,port:0,host:'127.0.0.1'});
+    const a=await snapshot(alice),b=await snapshot(bob);
+    expect(a.world.droppedItems).toHaveLength(1);
+    const requests=[envelope(a,{dropId}),envelope(b,{dropId})];
+    const picked=await Promise.all([command(alice,'/api/inventory/pickup',requests[0]),command(bob,'/api/inventory/pickup',requests[1])]);
+    expect(picked.filter(reply=>reply.statusCode===200)).toHaveLength(1);
+    expect(picked.find(reply=>reply.statusCode!==200)!.json().error.code).toBe('DROP_NOT_FOUND');
+    const winner=picked[0].statusCode===200?0:1;
+    const replay=await command([alice,bob][winner],'/api/inventory/pickup',requests[winner]);
+    expect(replay.json()).toEqual(picked[winner].json());
+    const final=await Promise.all([snapshot(owner),snapshot(alice),snapshot(bob)]);
+    expect(final[0].world.droppedItems).toEqual([]);
+    expect(final.flatMap(s=>s.player.inventory).reduce((sum,item)=>sum+item.quantity,0)).toBe(2);
+  });
   beforeAll(async () => {
     isolatedDatabase(databaseUrl!);
     pool = new Pool({connectionString: databaseUrl});

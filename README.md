@@ -1,64 +1,238 @@
 # 场域战争
 
-基于《游戏设计初稿》0.6 的浏览器多人游戏内测实现。玩家匿名加入红、绿、蓝三方，在虚拟城市中移动、Hack、部署八脚、攻防充能和连线成场；五分钟计分，七天结算。运行世界采用唯一的 `beta-v1` 规则与 100 点聚簇地图。
+场域战争是一款浏览器多人阵营游戏。玩家加入红、绿、蓝三方，在虚拟城市中探索据点（PO）、收集装备、部署八脚、连接据点并围成领域，为阵营获得积分。当前使用 `beta-v1` 规则与 20 个城区、100 个初始 PO 的地图，每 5 分钟结算据点和领域收益，每 7 天结束一个赛季。
 
-## 本机部署
+## 主要功能
 
-需要 Docker Engine、Compose 和标准 Shell。无需宿主 Node.js、Python 或 PostgreSQL。
+- **身份与成长**：匿名创建账号、恢复码找回身份、阵营选择、AP 升级与升级礼包；玩家名称支持中英文，最多 20 个字符，主界面右上角显示。
+- **地图探索**：点击空白处移动或改道，移动中右键停止，拖动平移、滚轮缩放，手机长按打开快捷菜单；玩家周围显示真实的 30 米操作范围。
+- **据点经营**：Hack 获取道具，部署八脚占领据点；批量部署默认按背包等级从高到低补槽，也可指定固定等级；单槽支持升级并显示部署人。
+- **连线与攻防**：双方端点均满八脚才能连线，消耗目标 Key；L1 据点最低连线范围为 320 米。侵入攻击可选择攻击器等级；支持充能、据点模组、领域建立与摧毁战报。
+- **背包管理**：道具使用、回收、丢弃与地面拾取。其他玩家可在 30 米内拾取落地道具；回收返还能量，糖块回收与使用遵循相同规则。
+- **新手与运营**：新玩家保存恢复码、选择阵营后自动打开玩法说明，关闭后记录已读；左侧可随时重看。L8 玩家可申请新 PO，管理后台提供申请审核、公告、投诉处理和运营操作。
+
+服务端负责规则判定和资产变更。写操作通过 PostgreSQL 事务、请求收据和玩家版本控制提交，网络结果不明时可核对原请求；WebSocket 通知客户端刷新已提交状态。
+
+## 技术与目录
+
+| 层次 | 技术 |
+| --- | --- |
+| 界面 | Vue 3、TypeScript、Vite 7、SVG 地图 |
+| 服务 | Node.js 24、Fastify 5、HTTP / WebSocket |
+| 数据 | PostgreSQL 18、SQL 迁移、JSONB 状态与事务收据 |
+| 部署 | Docker Compose、Nginx 1.28、独立应用与网页镜像 |
+| 验证 | Vitest、Playwright、真实 PostgreSQL 集成及迁移测试 |
+
+依赖版本由 `package-lock.json` 锁定，容器基础镜像固定摘要。
+
+```text
+apps/field-wars/        Vue 页面、地图、背包、据点详情、账号与新手引导
+server/                HTTP / WebSocket、身份、事务存储、运营接口
+  migrations/          按顺序执行的数据库与规则迁移
+shared/                前后端共享类型、规则引擎、几何与名称校验
+  beta-v1.json          当前规则参数
+maps/beta-v1.json       城区、初始据点、出生点和地形
+tests/                 规则、界面、集成、迁移与负载检查
+scripts/               私有配置初始化、备份与独立恢复
+deploy/                环境变量示例、应用代理与网关 Nginx 配置
+Dockerfile             应用构建及运行镜像
+Dockerfile.web         前端构建及 Nginx 镜像
+compose.yaml           本机完整部署
+compose.server.yaml    192.168.3.61 的服务器覆盖配置
+```
+
+## 本地运行
+
+### Docker 一键启动
+
+需要 Docker Engine、Buildx、Docker Compose 和标准 Shell；宿主不需要安装 Node.js 或 PostgreSQL。
 
 ```sh
 ./scripts/init-env.sh
 docker compose up -d --build
 docker compose ps
+curl -fsS http://127.0.0.1:8080/health/ready
 ```
 
-游戏入口为 [http://localhost:8080](http://localhost:8080)，管理入口为 [http://localhost:8080/admin](http://localhost:8080/admin)。管理员密码由初始化脚本生成，保存在私有 `.env` 的 `ADMIN_PASSWORD`。初始化脚本不会覆盖已有配置。默认仅绑定回环地址，数据库不对宿主开放端口。
+- 游戏：[http://localhost:8080](http://localhost:8080)
+- 管理：[http://localhost:8080/admin](http://localhost:8080/admin)
+- 管理员密码：私有 `.env` 的 `ADMIN_PASSWORD`。
 
-停止使用 `docker compose down`，数据库卷会保留。升级前先备份；不要使用删除数据卷的选项。配置、HTTPS、升级、备份与独立恢复步骤见[部署说明](docs/部署说明.md)。
-
-## 服务器部署
-
-服务器目录为 `/home/hidewnd/docker/field-wars`。需要 Docker Compose 2.24.4 或更高版本；使用 `compose.server.yaml` 覆盖本机配置，部署标识为 `field-wars`。
-
-执行 `./scripts/init-env.sh` 生成独立的私有配置，再在 `.env` 中设置 `PUBLIC_ORIGIN=https://fieldwars.hidewnd.cn`、`COOKIE_SECURE=true`、`LAN_ORIGIN=http://192.168.3.61:8080`。保留自动生成的数据库、管理员密码和会话密钥，不要复用本机配置。
+初始化脚本只在 `.env` 不存在时生成随机密码和会话密钥，不覆盖已有配置。默认仅向宿主回环地址开放网页端口，数据库不开放宿主端口。迁移成功、应用健康后，网页服务才启动。本机 Compose 项目标识沿用 `junction-city`。
 
 ```sh
-mkdir -p data/postgres
-docker compose -f compose.yaml -f compose.server.yaml up -d --build
-docker compose -f compose.yaml -f compose.server.yaml ps
+docker compose logs --tail=100 migrate app web
+docker compose down
 ```
 
-内网入口为 `http://192.168.3.61:8080`，管理入口为 `/admin`。内网穿透应将 `https://fieldwars.hidewnd.cn` 转发到该 HTTP 入口，保留原始 Host，支持 WebSocket；域名证书由穿透入口负责。域名与 IP 的浏览器身份各自隔离，可用恢复码迁移身份。
+`down` 保留数据库卷；不要使用 `down -v` 清除已有游戏数据。
 
-只有显式配置的私网 IPv4 HTTP 来源可使用非 Secure Cookie；域名 HTTPS 会话继续使用 Secure Cookie，HTTP 与 WebSocket 都核对允许来源，写请求还需 CSRF 令牌。数据库不开放宿主端口，数据持久化到 `data/postgres/`；可用 `FIELD_WARS_DATA_DIR` 指定另一绝对路径。
+### 源码开发与热更新
 
-备份时使用同一组配置，例如 `docker compose -f compose.yaml -f compose.server.yaml exec -T db pg_dump -U game -d game --format=custom --no-owner --no-acl > backup.dump`。升级前先完成备份，保留 `.env` 与 `data/`。以下设计文档及历史证据仅保留在本地，不随源码仓库上传。
+需要 Node.js 24 和 npm。先安装依赖，再通过临时 Compose 覆盖文件只向本机开放开发数据库端口：
 
-## 设计和验收入口
+```sh
+npm ci
+./scripts/init-env.sh
+cat > /tmp/field-wars.dev.yaml <<'YAML'
+services:
+  db:
+    ports:
+      - "127.0.0.1:55432:5432"
+YAML
+docker compose -f compose.yaml -f /tmp/field-wars.dev.yaml up -d --wait db
+```
 
-| 文件 | 用途 |
-| --- | --- |
-| [游戏设计初稿](游戏设计初稿.md) | 完整基础设计及候选方案，保留原评审语义 |
-| [冻结内测规则](docs/内测规则.md) | 本轮选择、运行边界、规则与地图摘要 |
-| [初版开发计划](docs/初版开发计划.md) | M0–M5 交付顺序、退出条件及交付范围 |
-| [验收追踪](docs/验收追踪.md) | 真实数据库、浏览器、部署、故障及容量验证记录；未达项单独列出 |
-| [部署说明](docs/部署说明.md) | 初始化、启动、管理员访问、升级、备份和恢复 |
+数据库沿用本机 `junction-city` 项目数据。若此前已启动完整应用，先执行 `docker compose stop app web`，避免两个应用执行器同时运行。
 
-“可运行”与“全部容量指标通过”分别验收。请以验收追踪中的实测结果判断内测规模，不将构建通过等同于 500 次/秒攻击吞吐达标。
+在第一个终端启动后端：
 
-## 源码结构
+```sh
+set -a
+. ./.env
+set +a
+export DATABASE_URL="postgresql://game:${DB_PASSWORD}@127.0.0.1:55432/game"
+export PUBLIC_ORIGIN=http://localhost:5173
+export COOKIE_SECURE=false
+export HOST=127.0.0.1
+export PORT=3000
+npm run migrate
+npm run dev
+```
 
-- `apps/field-wars/`：Vue 3 单页应用与 SVG 交互地图，生产环境由 Nginx 提供。
-- `server/`：Fastify HTTP/WebSocket、身份、世界串行事务、运营接口和 SQL 迁移。
-- `shared/`：前后端共享契约、纯规则引擎、整数几何与冻结规则 JSON。
-- `maps/beta-v1.json`：运行地图，含 20 城区、100 PO、20 出生点及冻结河铁地形。
-- `tests/`：规则、几何、真实 PostgreSQL 集成、浏览器和独立负载工具。
-- `scripts/`、`deploy/`：部署初始化、备份恢复与 Web 代理配置。
+在第二个终端启动前端：
 
-开发使用 Node.js 24；精确依赖版本由 `package-lock.json` 锁定。`npm ci` 后可执行 `npm run typecheck`、`npm run build`。不连接数据库的规则检查为 `npx vitest run tests/engine.test.ts tests/geometry.test.ts`。真实数据库测试要求独立的 `TEST_DATABASE_URL`，库名必须含独立 `test` 段；测试会清空该测试库，不能指向日常内测数据库。未配置测试库时明确跳过，不算通过。
+```sh
+npm run dev:web -- --host localhost --strictPort
+```
 
-## 保留的设计材料
+访问 [http://localhost:5173](http://localhost:5173)。Vite 将 `/api` 和 WebSocket 代理到 `127.0.0.1:3000`；浏览器入口必须与后端 `PUBLIC_ORIGIN` 一致。
 
-原 100 点分散地图 `maps/map-initial.json` 及原 SVG/PNG 保留为对照；`review-evidence/cluster-review-v1.json` 是运行地图的聚簇候选来源。运行时只读取 `maps/beta-v1.json`，地图中的节点由数据库绘制，背景不带旧 PO 标记。
+## 远程部署与更新
 
-旧 v0.3、v0.4、v0.5 设计稿及交接材料已退出当前阅读入口，原字节保留在 `archive/设计历史稿及原始材料-2026-10-08.zip`，目录见 `archive/归档清单.json`。旧评审状态仅代表当时证据。静态设计审计可用 `python3 review-evidence/audit_design.py --generate-candidate` 复现；该命令不修改冻结运行地图，也不能替代游戏运行验收。
+目标服务器为 `192.168.3.61`，项目目录为 `/home/hidewnd/docker/field-wars`。服务器需安装 Docker Engine / Buildx，以及支持 `!override` 的 Docker Compose 2.24.4 或更高版本。SSH 账号须具有项目目录写入及 Docker 操作权限。
+
+### 首次配置
+
+将已提交的源码放入服务器项目目录，在服务器执行：
+
+```sh
+cd /home/hidewnd/docker/field-wars
+./scripts/init-env.sh
+mkdir -p data/postgres backups
+chmod 700 backups
+```
+
+保留服务器独立生成的 `DB_PASSWORD`、`SESSION_SECRET` 和 `ADMIN_PASSWORD`，不要用本机 `.env` 覆盖。修改服务器 `.env` 的以下非机密配置：
+
+```dotenv
+PUBLIC_ORIGIN=https://game.hidewnd.cn
+COOKIE_SECURE=true
+LAN_ORIGINS=http://192.168.3.61:8080,http://192.168.3.65:8801
+WEB_PORT=8080
+FIELD_WARS_DATA_DIR=/home/hidewnd/docker/field-wars/data/postgres
+```
+
+`PUBLIC_ORIGIN` 和 `LAN_ORIGINS` 只包含协议、主机和端口，不包含 `/fieldwar/` 路径。公网 HTTPS 使用 Secure Cookie；只有显式配置的私网 IPv4 HTTP 来源可使用非 Secure Cookie。写操作继续校验来源和 CSRF。
+
+```sh
+docker compose -f compose.yaml -f compose.server.yaml config --quiet
+docker compose -f compose.yaml -f compose.server.yaml up -d --build
+docker compose -f compose.yaml -f compose.server.yaml ps
+curl -fsS http://127.0.0.1:8080/health/ready
+```
+
+服务器 Compose 项目标识为 `field-wars`。数据库目录绑定到 `data/postgres/`，不开放数据库宿主端口。
+
+### 更新已有服务器
+
+先构建确认，再停写、备份并迁移。以下命令均在项目目录运行；两份 Compose 配置必须同时使用。
+
+1. 从已确认的提交同步源码。对于未保存 Git 元数据的部署目录，可在开发机通过已配置好的 SSH 登录执行：
+
+   ```sh
+   git archive --format=tar HEAD | ssh hidewnd@192.168.3.61 \
+     'tar -xf - -C /home/hidewnd/docker/field-wars'
+   ```
+
+   归档只包含已提交文件，不包含 `.env`、数据库、备份、依赖或构建产物。若服务器目录本身由 Git 管理，则核对无本地改动后更新到对应提交。记录部署的提交号：`git rev-parse HEAD`。
+
+2. 在服务器检查配置并提前构建镜像，构建失败时旧服务仍可继续运行：
+
+   ```sh
+   docker compose -f compose.yaml -f compose.server.yaml config --quiet
+   docker compose -f compose.yaml -f compose.server.yaml build
+   ```
+
+3. 停止旧应用写入，备份数据库并验证归档可读取：
+
+   ```sh
+   docker compose -f compose.yaml -f compose.server.yaml stop app
+   umask 077
+   backup="backups/game-$(date +%Y%m%d-%H%M%S).dump"
+   docker compose -f compose.yaml -f compose.server.yaml exec -T db \
+     pg_dump -U game -d game --format=custom --no-owner --no-acl > "$backup"
+   docker compose -f compose.yaml -f compose.server.yaml exec -T db \
+     pg_restore --list < "$backup" > /dev/null
+   ```
+
+4. 启动新版本并检查服务状态：
+
+   ```sh
+   docker compose -f compose.yaml -f compose.server.yaml up -d --no-build --pull never
+   docker compose -f compose.yaml -f compose.server.yaml ps --all
+   docker compose -f compose.yaml -f compose.server.yaml logs --tail=100 migrate app web
+   curl -fsS http://127.0.0.1:8080/health/ready
+   curl -fsS http://127.0.0.1:8080/api/ruleset
+   ```
+
+本次升级包含 `005`、`006` 迁移：操作范围改为 30 米、新 PO 最小间距改为 5 米、L1 连线范围下限改为 320 米，以及现有脚部署人名称补齐。迁移保持账号和背包资产，未知规则摘要会拒绝启动。迁移成功后不能直接使用不兼容的旧应用回退；应使用匹配源码和备份恢复到独立环境核验，再安排切换。
+
+### 访问入口与网关
+
+| 入口 | 游戏 | 管理 |
+| --- | --- | --- |
+| 内网直连 | `http://192.168.3.61:8080/` | `/admin` |
+| 内网网关 | `http://192.168.3.65:8801/fieldwar/` | `/fieldwar/admin` |
+| 公网 HTTPS | `https://game.hidewnd.cn/fieldwar/` | `/fieldwar/admin` |
+
+`192.168.3.65:8801` 的网关配置见 [deploy/nginx-gateway.conf](deploy/nginx-gateway.conf)。它将 `/fieldwar/` 转发到 `192.168.3.61:8080/`，保留 WebSocket 升级，并将 Cookie 路径限制到 `/fieldwar/`。公网穿透入口负责 TLS，转发到该网关；更新游戏应用不会自动修改网关配置。网关首次安装或修改后，需先通过 `nginx -t` 再 reload。
+
+域名与 IP 的浏览器身份彼此独立，换入口时可通过恢复码找回原账号。
+
+## 备份、恢复与验证
+
+本机默认 Compose 部署可使用现有脚本：
+
+```sh
+mkdir -p backups
+./scripts/backup-db.sh backups/game-local.dump
+./scripts/restore-into-new.sh game-restore-1 backups/game-local.dump
+WEB_PORT=8081 PUBLIC_ORIGIN=http://127.0.0.1:8081 \
+  docker compose -p game-restore-1 up -d --build
+```
+
+恢复脚本要求新项目名和不存在的数据卷。服务器备份使用上一节的双 Compose 命令；不要对服务器生产目录执行清卷恢复。数据库备份与私有 `.env` 应分别保存在受控位置。
+
+```sh
+npm test
+npm run typecheck
+npm run build
+```
+
+`npm test` 包含规则、几何、路径与来源边界等检查。真实 PostgreSQL 检查需要预先建立独立测试数据库：
+
+- `TEST_DATABASE_URL`：HTTP 集成测试。
+- `OPERATIONS_TEST_DATABASE_URL`：运营接口测试，使用独立数据库。
+- `MIGRATION_TEST_DATABASE_URL`：规则升级、空库初始化和重复迁移测试，使用另一独立数据库。
+
+测试库名必须含独立的 `test` 段，例如 `field_wars_test`；这些测试会重建表或清空测试数据，不能指向游戏库。未配置时会明确跳过，不能视为通过。
+
+浏览器检查使用 Playwright。例如先启动本地前端，再运行使用模拟接口的交互检查：
+
+```sh
+BASE_URL=http://localhost:5173 PLAYWRIGHT_CHANNEL=chrome \
+  npm exec -- playwright test tests/browser-interactions.spec.ts --workers=1
+```
+
+上述命令需要已安装 Chrome；真实服务浏览器用例需要独立运行环境。构建和功能测试不代表容量指标或生产部署已经通过，运行情况以实际健康检查和验收结果为准。

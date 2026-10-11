@@ -5,7 +5,7 @@ import {readConfig,isAllowedOrigin,type Config} from '../server/config.js';
 import {Auth} from '../server/auth.js';
 import type {Store} from '../server/store.js';
 
-const config:Config={databaseUrl:'postgresql://test/test',secret:'test-secret-with-at-least-32-characters',adminPassword:'test-admin-password',origin:'https://fieldwars.hidewnd.cn',lanOrigin:'http://192.168.3.61:8080',cookieSecure:true,port:3000,host:'127.0.0.1'};
+const config:Config={databaseUrl:'postgresql://test/test',secret:'test-secret-with-at-least-32-characters',adminPassword:'test-admin-password',origin:'https://game.hidewnd.cn',lanOrigins:['http://192.168.3.61:8080','http://192.168.3.65:8801'],cookieSecure:true,port:3000,host:'127.0.0.1'};
 afterEach(()=>vi.unstubAllEnvs());
 function env(lan:string) {
   vi.stubEnv('DATABASE_URL',config.databaseUrl);
@@ -13,26 +13,26 @@ function env(lan:string) {
   vi.stubEnv('ADMIN_PASSWORD',config.adminPassword);
   vi.stubEnv('PUBLIC_ORIGIN',config.origin);
   vi.stubEnv('COOKIE_SECURE','true');
-  vi.stubEnv('LAN_ORIGIN',lan);
+  vi.stubEnv('LAN_ORIGINS',lan);
 }
 describe('部署来源边界',()=>{
-  it.each(['http://10.0.0.1:8080','http://172.16.0.1','http://172.31.255.254','http://192.168.3.61:8080'])('只接受显式私网 IPv4 来源 %s',origin=>{
-    env(origin);expect(readConfig().lanOrigin).toBe(origin);
+  it.each(['http://10.0.0.1:8080','http://172.16.0.1','http://172.31.255.254','http://192.168.3.61:8080','http://192.168.3.61:8080,http://192.168.3.65:8801'])('只接受显式私网 IPv4 来源 %s',origin=>{
+    env(origin);expect(readConfig().lanOrigins).toEqual(origin.split(','));
   });
   it.each(['http://8.8.8.8','http://172.15.0.1','http://172.32.0.1','http://example.com','http://192.168.3.61/path','http://user:pass@192.168.3.61','https://192.168.3.61',''])('拒绝非法 LAN 来源 %s',origin=>{
     env(origin);expect(()=>readConfig()).toThrow();
   });
   it('仍拒绝公网 HTTP 主入口和未开启 Secure 的公网 HTTPS',()=>{
-    env(config.lanOrigin!);vi.stubEnv('PUBLIC_ORIGIN','http://fieldwars.hidewnd.cn');expect(()=>readConfig()).toThrow();
+    env(config.lanOrigins![0]);vi.stubEnv('PUBLIC_ORIGIN','http://game.hidewnd.cn');expect(()=>readConfig()).toThrow();
     vi.stubEnv('PUBLIC_ORIGIN',config.origin);vi.stubEnv('COOKIE_SECURE','false');expect(()=>readConfig()).toThrow();
   });
   it('来源必须精确匹配，未配置 LAN 时缺失来源也不能通过',()=>{
     expect(isAllowedOrigin(config,config.origin)).toBe(true);
-    expect(isAllowedOrigin(config,config.lanOrigin)).toBe(true);
-    for(const origin of [undefined,'null','https://evil.example','http://192.168.3.61:8081','http://fieldwars.hidewnd.cn'])expect(isAllowedOrigin(config,origin)).toBe(false);
-    expect(isAllowedOrigin({...config,lanOrigin:undefined},undefined)).toBe(false);
+    expect(isAllowedOrigin(config,config.lanOrigins![0])).toBe(true);
+    for(const origin of [undefined,'null','https://evil.example','http://192.168.3.61:8081','http://game.hidewnd.cn'])expect(isAllowedOrigin(config,origin)).toBe(false);
+    expect(isAllowedOrigin({...config,lanOrigins:undefined},undefined)).toBe(false);
   });
-  it.each([[config.origin,true],[config.lanOrigin!,false]] as const)('登录 Cookie 按已验证入口设置 Secure：%s',async(origin,secure)=>{
+  it.each([[config.origin,true],[config.lanOrigins![0],false],[config.lanOrigins![1],false]] as const)('登录 Cookie 按已验证入口设置 Secure：%s',async(origin,secure)=>{
     const app=Fastify();await app.register(cookie);
     const query=vi.fn().mockResolvedValue({rowCount:1,rows:[{token_hash:'test'}]});
     const auth=new Auth(config,{pool:{query}} as unknown as Store);

@@ -4,13 +4,13 @@ name: field-wars
 services:
   app:
     environment:
-      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://fieldwars.hidewnd.cn}
-      LAN_ORIGIN: ${LAN_ORIGIN:-http://192.168.3.61:8080}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://game.hidewnd.cn}
+      LAN_ORIGINS: ${LAN_ORIGINS:-http://192.168.3.61:8080,http://192.168.3.65:8801}
       COOKIE_SECURE: "true"
   migrate:
     environment:
-      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://fieldwars.hidewnd.cn}
-      LAN_ORIGIN: ${LAN_ORIGIN:-http://192.168.3.61:8080}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://game.hidewnd.cn}
+      LAN_ORIGINS: ${LAN_ORIGINS:-http://192.168.3.61:8080,http://192.168.3.65:8801}
       COOKIE_SECURE: "true"
   web:
     ports: !override

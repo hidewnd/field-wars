@@ -51,7 +51,7 @@ describe('连线候选和最终命令共用目标资格',()=>{
   });
 
   it('L1 满脚射程精确含端点，超出一厘米排除；八条出线后排除',()=>{
-    const edge=setup(RULES.rangeCm[8]);
+    const edge=setup(RULES.minimumPortalRangeCm);
     expect(code(()=>validateLinkTarget(edge.world,edge.player,'A','B'))).toBe('OK');
     edge.world.portals.B.x++;
     expect(code(()=>validateLinkTarget(edge.world,edge.player,'A','B'))).toBe('LINK_RANGE');

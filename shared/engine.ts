@@ -2,6 +2,7 @@ import type {BattleEvent, LevelReward, CommandContext, DueResult, Faction, GameC
 import {distanceSquared, withinRange} from './geometry.js';
 import {validateLinkTarget} from './linking.js';
 import {RULES, inventoryCount, levelForAp, portalLevel, xmCap} from './rules.js';
+import {playerNameError} from './profile.js';
 
 const ENERGY = RULES.resonators.energy;
 const QUOTA = RULES.resonators.quotaPerPlayerPerPortal;
@@ -79,7 +80,7 @@ function getPortal(world: World, id: string | undefined): Portal {
   return world.portals[id];
 }
 function near(player: Player, portal: Portal): void {
-  if (!withinRange(player, portal, RULES.interactionRangeCm)) fail('OUT_OF_RANGE', '距离PO超过40米');
+  if (!withinRange(player, portal, RULES.interactionRangeCm)) fail('OUT_OF_RANGE', `距离PO超过${RULES.interactionRangeCm / 100}米`);
 }
 function cooldown(player: Player, name: string, now: number): void {
   if ((player.cooldowns[name] ?? 0) > now) fail('COOLDOWN', '操作冷却中', {readyAt: player.cooldowns[name]});
@@ -93,7 +94,7 @@ function occupied(portal: Portal): number { return portal.resonators.filter(Bool
 
 export function createPlayer(id: string, name: string, now: number, spawn: Point): Player {
   return {id, name, x: spawn.x, y: spawn.y, faction: null, ap: 0, xm: RULES.player.starter.xm, energyAt: now, energyRemainder: 0,
-    inventory: [], movement: null, cooldowns: {}, hacks: {}, version: 0, createdAt: now, tutorial: {}, rechargeRemainder: 0, restrictedUntil: 0};
+    inventory: [], movement: null, cooldowns: {}, hacks: {}, version: 0, createdAt: now, tutorial: {quick_start_pending_at: now}, rechargeRemainder: 0, restrictedUntil: 0};
 }
 
 export function createWorld(map: MapData, now: number): World {
@@ -191,7 +192,7 @@ function deployedResonator(player: Player, portal: Portal, slot: number, itemLev
   const x = portal.x + Math.round(radius * Math.cos(SLOT_ANGLE[slot]));
   const y = portal.y + Math.round(radius * Math.sin(SLOT_ANGLE[slot]));
   if (x < 0 || x > ctx.map.width || y < 0 || y > ctx.map.height) fail('SLOT_OUT_OF_BOUNDS', '此站位会让脚越出城市');
-  return {level: itemLevel, energy: ENERGY[itemLevel], owner: player.id, x, y, generation: ctx.id(), nextDecayAt: ctx.now + RULES.resonators.decayIntervalMs};
+  return {level: itemLevel, energy: ENERGY[itemLevel], owner: player.id, ownerName: player.name, x, y, generation: ctx.id(), nextDecayAt: ctx.now + RULES.resonators.decayIntervalMs};
 }
 
 function deploy(world: World, player: Player, portal: Portal, itemLevel: number, slot: number, ctx: CommandContext): number {
@@ -276,8 +277,7 @@ function attack(world: World, player: Player, weaponLevel: number, ctx: CommandC
   const affected = new Map<string, {portal: Portal; level: number; faction: Faction; owners: string[]}>();
   for (const portal of Object.values(world.portals)) {
     if (!portal.faction || portal.faction === player.faction) continue;
-    // 脚最多位于PO中心40米外；中心粗筛只缩小遍历范围，命中仍按每只脚的真实坐标精确裁定。
-    if (!withinRange(player, portal, RADIUS[weaponLevel] + RULES.interactionRangeCm + 1)) continue;
+    // 操作半径缩小后旧脚仍保留原坐标，不能用新部署半径粗筛，否则会漏掉可命中的旧脚。
     const shield = portal.mods.filter(m => m?.type === 'shield').length * RULES.mods.shieldReductionPercent / 100;
     const links = world.links.filter(l => l.origin === portal.id || l.destination === portal.id).length;
     const linkReduction = Math.floor((RULES.mods.linkReductionNumerator / RULES.mods.linkReductionDenominator) * Math.atan(links / Math.E)) / 100;
@@ -377,9 +377,32 @@ export function applyCommand(world: World, player: Player, command: GameCommand,
   const previousFaction = command.portalId ? w.portals[command.portalId]?.faction : undefined;
   let result: Record<string, unknown>;
   let alerts: GameResult['alerts'];
+  let destroyedFields: World['fields'] = [];
   if (w.maintenance) fail('MAINTENANCE', '世界维护中');
   if (p.restrictedUntil > ctx.now && command.type !== 'move-cancel') fail('RESTRICTED', '账号暂时受限');
   switch (command.type) {
+    case 'rename': {
+      const error = playerNameError(payload.name);
+      if (error) fail('INVALID_INPUT', error);
+      const name = (payload.name as string).trim();
+      p.name = name;
+      // 当前脚署名跟随账号改名，历史战报仍保留事件发生时的名字。
+      for (const portal of Object.values(w.portals)) {
+        let changed = false;
+        for (const resonator of portal.resonators) {
+          if (resonator?.owner === p.id && resonator.ownerName !== name) {resonator.ownerName = name; changed = true;}
+        }
+        if (changed) portal.version++;
+      }
+      result = {type: 'rename', name}; break;
+    }
+    case 'guide-read': {
+      if (p.tutorial.quick_start_pending_at !== undefined) {
+        delete p.tutorial.quick_start_pending_at;
+        p.tutorial.quick_start_seen_at = ctx.now;
+      }
+      result = {type: 'guide-read'}; break;
+    }
     case 'faction': {
       if (p.faction) fail('FACTION_LOCKED', '阵营不可重复选择');
       if (payload.faction !== 'red' && payload.faction !== 'green' && payload.faction !== 'blue') fail('INVALID_INPUT', '阵营无效');
@@ -442,13 +465,17 @@ export function applyCommand(world: World, player: Player, command: GameCommand,
       if (!old || itemLevel <= old.level) fail('UPGRADE_UNAVAILABLE', '只能升级已有脚');
       if (portal.resonators.filter(r => r?.owner === p.id && r.level === itemLevel).length >= QUOTA[itemLevel]) fail('QUOTA_EXCEEDED', '该等级脚配额已满');
       const cost = itemLevel * RULES.resonators.xmCostPerLevel; enoughXm(p, cost); takeItem(p, 'resonator', itemLevel, 1);
-      portal.resonators[slot] = {...old, level: itemLevel, energy: ENERGY[itemLevel], owner: p.id, generation: ctx.id(), nextDecayAt: ctx.now + RULES.resonators.decayIntervalMs};
+      portal.resonators[slot] = {...old, level: itemLevel, energy: ENERGY[itemLevel], owner: p.id, ownerName: p.name, generation: ctx.id(), nextDecayAt: ctx.now + RULES.resonators.decayIntervalMs};
       portal.version++; p.xm -= cost;
       const ap = old.owner === p.id ? 0 : RULES.ap.upgradeOther; award(p, ap);
       result = {type: 'upgrade', portalId: portal.id, slot, level: itemLevel, cost, ap}; break;
     }
     case 'attack': {
+      const previousFields = w.fields;
       const outcome = attack(w, p, level(payload.level, p), ctx);
+      // 一次脉冲可能同时拆掉同一领域的多个顶点，按攻击前后的领域集合只记录一次。
+      const survivingFields = new Set(w.fields.map(field => field.id));
+      destroyedFields = previousFields.filter(field => !survivingFields.has(field.id));
       result = outcome.result; alerts = outcome.alerts; break;
     }
     case 'recharge': {
@@ -465,27 +492,54 @@ export function applyCommand(world: World, player: Player, command: GameCommand,
       }
       result = recharge(p, portal, slot, amount, ctx); break;
     }
-    case 'sugar': {
+    case 'sugar':
+    case 'recycle': {
+      // 糖块回收与使用共用等级、冷却、满能量和收益规则，不能借回收绕开使用限制。
+      if (command.type === 'recycle' && payload.type !== 'cube') {
+        ensureStill(p);
+        const itemType = payload.type;
+        if (typeof itemType !== 'string' || !['resonator', 'pulse', 'key', 'shield', 'heatsink', 'multihack'].includes(itemType)) fail('INVALID_INPUT', '道具类型无效');
+        const itemLevel = ['key', 'shield', 'heatsink', 'multihack'].includes(itemType) ? 1 : integer(payload.level, '等级', 1, 8);
+        const quantity = integer(payload.quantity, '数量', 1, 5000);
+        const keyPortal = itemType === 'key' ? text(payload.portalId, 'Key目标') : undefined;
+        takeItem(p, itemType as ItemType, itemLevel, quantity, keyPortal, false);
+        const rewardEach = itemType === 'key' ? RULES.items.recycleKey : ['shield', 'heatsink', 'multihack'].includes(itemType) ? RULES.items.recycleMod : RULES.items.recycleResonatorAndPulsePerLevel * itemLevel;
+        const restored = Math.min(xmCap(levelForAp(p.ap)) - p.xm, rewardEach * quantity);
+        p.xm += restored;
+        result = {type: 'recycle', itemType, level: itemLevel, quantity, restored, wasted: rewardEach * quantity - restored}; break;
+      }
+      if (command.type === 'recycle') integer(payload.quantity, '数量', 1, 1);
       ensureStill(p); cooldown(p, 'sugar', ctx.now);
       const itemLevel = level(payload.level, p), cap = xmCap(levelForAp(p.ap));
       if (p.xm >= cap) fail('ALREADY_FULL', 'XM已满');
       takeItem(p, 'cube', itemLevel, 1);
       const restored = Math.min(cap - p.xm, itemLevel * RULES.items.cubeRecoveryPerLevel);
       p.xm += restored; p.cooldowns.sugar = ctx.now + RULES.items.cubeCooldownMs;
-      result = {type: 'sugar', level: itemLevel, restored, wasted: itemLevel * RULES.items.cubeRecoveryPerLevel - restored}; break;
+      result = {type: command.type, itemType: 'cube', quantity: 1, level: itemLevel, restored, wasted: itemLevel * RULES.items.cubeRecoveryPerLevel - restored}; break;
     }
-    case 'recycle': {
+    case 'drop': {
       ensureStill(p);
-      const type = payload.type;
-      if (!['resonator', 'pulse', 'cube', 'key', 'shield', 'heatsink', 'multihack'].includes(String(type))) fail('INVALID_INPUT', '道具类型无效');
-      const itemType = type as ItemType, itemLevel = itemType === 'key' || ['shield', 'heatsink', 'multihack'].includes(itemType) ? 1 : integer(payload.level, '等级', 1, 8);
-      const quantity = integer(payload.quantity, '数量', 1, 5000);
+      const itemType = payload.type;
+      if (typeof itemType !== 'string' || !['resonator', 'pulse', 'cube', 'key', 'shield', 'heatsink', 'multihack'].includes(itemType)) fail('INVALID_INPUT', '道具类型无效');
+      const itemLevel = ['key', 'shield', 'heatsink', 'multihack'].includes(itemType) ? 1 : integer(payload.level, '等级', 1, 8);
+      const quantity = integer(payload.quantity, '数量', 1, 500);
       const keyPortal = itemType === 'key' ? text(payload.portalId, 'Key目标') : undefined;
-      takeItem(p, itemType, itemLevel, quantity, keyPortal, false);
-      const rewardEach = itemType === 'cube' ? itemLevel * RULES.items.recycleCubePerLevel : itemType === 'key' ? RULES.items.recycleKey : ['shield', 'heatsink', 'multihack'].includes(itemType) ? RULES.items.recycleMod : RULES.items.recycleResonatorAndPulsePerLevel * itemLevel;
-      const restored = Math.min(xmCap(levelForAp(p.ap)) - p.xm, rewardEach * quantity);
-      p.xm += restored;
-      result = {type: 'recycle', itemType, level: itemLevel, quantity, restored, wasted: rewardEach * quantity - restored}; break;
+      takeItem(p, itemType as ItemType, itemLevel, quantity, keyPortal, false);
+      const drop = {id: ctx.id(), x: p.x, y: p.y, droppedAt: ctx.now,
+        item: {type: itemType as ItemType, level: itemLevel, quantity, ...(keyPortal ? {portalId: keyPortal} : {})}};
+      (w.droppedItems ??= []).push(drop);
+      result = {type: 'drop', drop}; break;
+    }
+    case 'pickup': {
+      ensureStill(p);
+      const id = text(payload.dropId, '地面道具');
+      const drop = w.droppedItems?.find(item => item.id === id);
+      if (!drop) fail('DROP_NOT_FOUND', '道具已被拾取');
+      if (!withinRange(p, drop, RULES.interactionRangeCm)) fail('OUT_OF_RANGE', `请靠近道具${RULES.interactionRangeCm / 100}米内拾取`);
+      if (inventoryCount(p.inventory) + drop.item.quantity > RULES.player.inventoryLimit) fail('INVENTORY_FULL', '背包空间不足，请先使用、回收或丢弃物品');
+      addItem(p, drop.item.type, drop.item.level, drop.item.quantity, drop.item.portalId);
+      w.droppedItems = w.droppedItems!.filter(item => item.id !== id);
+      result = {type: 'pickup', dropId: id, item: drop.item}; break;
     }
     case 'mod': {
       ensureStill(p); ensureFaction(p);
@@ -549,6 +603,7 @@ export function applyCommand(world: World, player: Player, command: GameCommand,
         for (const field of result.fields as World['fields']) recordBattle(w, {id: ctx.id(), at: ctx.now, faction: p.faction, actor: p.name, kind: 'field', portals: field.vertices, amount: field.mu});
       }
       for (const alert of alerts ?? []) recordBattle(w, {id: ctx.id(), at: ctx.now, faction: p.faction, actor: p.name, kind: 'attack', portals: [alert.portalId]});
+      for (const field of destroyedFields) recordBattle(w, {id: ctx.id(), at: ctx.now, faction: p.faction, actor: p.name, kind: 'field-destroyed', portals: field.vertices, amount: field.mu});
     }
     p.version++; w.logicalAt = ctx.now;
   }

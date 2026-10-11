@@ -22,7 +22,8 @@ export function portalLevel(portal: Portal): number {
 
 export function portalRange(portal: Portal): number {
   const sum = portal.resonators.reduce<number>((total, resonator) => total + (resonator?.level ?? 0), 0);
-  return RULES.rangeCm[sum] ?? 0;
+  // 低等级射程设下限，混合升级不会使射程倒退；更高等级继续使用原表。
+  return sum ? Math.max(RULES.minimumPortalRangeCm, RULES.rangeCm[sum] ?? 0) : 0;
 }
 
 export function inventoryCount(items: Item[]): number {
