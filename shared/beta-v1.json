@@ -107,7 +107,9 @@
     "starter": {"xm": 3000, "resonatorsL1": 32, "pulsesL1": 12, "cubesL1": 4}},
   "resonators": {"energy": [0,1000,1500,2000,2500,3000,4000,5000,6000],
     "quotaPerPlayerPerPortal": [0,8,4,4,4,2,2,1,1], "xmCostPerLevel": 50,
-    "decayIntervalMs": 86400000, "decayPercent": 15},
+    "decayIntervalMs": 21600000, "decayPercent": 15},
+  "groundXm": {"refreshIntervalMs": 300000, "perPortal": 6, "randomCount": 200,
+    "portalRadiusCm": 6000, "amount": 50},
   "hack": {"xmCostPerPortalLevel": 50, "friendlyCooldownMs": 180000, "otherCooldownMs": 300000,
     "burnoutWindowMs": 14400000, "burnoutBase": 4, "extraPerMultiHack": 4,
     "drops": {"friendly": [4,2,1], "enemy": [2,4,1], "neutral": [3,3,1]},
@@ -155,7 +157,7 @@
     "installMod": 125, "destroyResonator": 75, "destroyLink": 187,
     "destroyField": 750, "link": 313, "field": 1250, "enemyHack": 100},
   "features": {"markers": true, "attackAlerts": true, "glyph": false, "chargeAttack": false,
-    "rareMods": false, "trade": false, "groundXm": false, "districtControl": false,
+    "rareMods": false, "trade": false, "groundXm": true, "districtControl": false,
     "prologue": false, "shelter": false, "parkMultiplier": false, "factionCompensation": false,
     "chat": false, "specializations": false}
 }

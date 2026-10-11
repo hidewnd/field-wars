@@ -140,6 +140,34 @@ suite('独立 PostgreSQL 的 HTTP 集成验收', () => {
     expect(final[0].world.droppedItems).toEqual([]);
     expect(final.flatMap(s=>s.player.inventory).reduce((sum,item)=>sum+item.quantity,0)).toBe(2);
   });
+  it('定时自动吸收共享XM原子落盘，两个玩家同点只分配一次且重启不重生',async()=>{
+    const alice=await createSession(),bob=await createSession();
+    await chooseFaction(alice);await chooseFaction(bob,'blue');
+    await app.close();
+    const now=Date.now();
+    for(const session of [alice,bob])await setPlayer(session,p=>{
+      p.x=10000;p.y=10000;p.xm=0;p.energyAt=now;p.energyRemainder=0;p.movement=null;
+    });
+    const row=(await pool.query('SELECT state FROM worlds WHERE id=1')).rows[0];
+    const point={id:'shared-xm',x:10000,y:10000,amount:50,spawnedAt:now,expiresAt:now+300000};
+    await pool.query('UPDATE worlds SET state=$1 WHERE id=1',[{...row.state,groundXm:[point],nextGroundXmAt:now+300000}]);
+    const store=new Store(databaseUrl!,secret);
+    try{
+      await store.start();store.online.set(alice.player.id,1);store.online.set(bob.player.id,1);
+      await Promise.all([store.tick(),store.tick()]);
+      const players=(await pool.query('SELECT state FROM accounts ORDER BY id')).rows.map(row=>row.state as Player);
+      // 自然恢复仅在获分配者落盘；未领取者保留0，不能由只读快照冒充持久化证据。
+      expect(players.filter(p=>p.xm>=50)).toHaveLength(1);
+      expect(players.reduce((sum,p)=>sum+p.xm,0)).toBeLessThan(60);
+      expect((await store.snapshot()).groundXm).toEqual([]);
+      const before=structuredClone(players);
+      await store.tick();
+      expect((await pool.query('SELECT state FROM accounts ORDER BY id')).rows.map(row=>row.state)).toEqual(before);
+    }finally{await store.close()}
+    const restarted=new Store(databaseUrl!,secret);
+    try{await restarted.start();expect((await restarted.snapshot()).groundXm).toEqual([])}finally{await restarted.close()}
+  });
+
   beforeAll(async () => {
     isolatedDatabase(databaseUrl!);
     pool = new Pool({connectionString: databaseUrl});
@@ -343,7 +371,8 @@ suite('独立 PostgreSQL 的 HTTP 集成验收', () => {
     expect(stale.statusCode).toBeGreaterThanOrEqual(400);
     expect(stale.json().error.code).toBe('GENERATION_CHANGED');
     const unchanged=await snapshot(session);
-    expect(unchanged.player.xm).toBe(1000);
+    // 快照包含随时间变化的自然恢复；核对落盘资产才能证明失败命令没有扣费。
+    expect((await pool.query('SELECT state FROM accounts WHERE id=$1',[session.player.id])).rows[0].state.xm).toBe(1000);
     expect(unchanged.world.portals[portal.id].resonators[0]?.energy).toBe(988);
     const valid=await command(session,`/api/portals/${portal.id}/recharge`,envelope(unchanged,
       {slot:0,amount:1000,generation:'new-generation'},randomUUID(),occupied.version));

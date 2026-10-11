@@ -84,8 +84,59 @@ test('侵入攻击位于第一项，二级菜单明确选择等级并禁用超�
     else await submenu.getByRole('menuitem',{name:/L1/}).click();
   }
   await expect.poll(()=>attack).toEqual({level:1});
+  await expect(page.getByRole('menu',{name:'地图快捷操作'})).toBeVisible();
+  await expect(page.getByRole('menu',{name:'选择攻击道具'})).toBeVisible();
   await expect(page.locator('vite-error-overlay')).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test('菜单外点击只收起菜单，连续攻击保留菜单并更新库存；桌面和手机显示XM点',async({page})=>{
+  const state=fixture(),errors:string[]=[];
+  state.world.portals[origin.id].faction='red';
+  state.world.groundXm=[[-6500,-5500],[-7200,3000],[6000,-5000],[1000,8500],[-5000,8500],[7500,7000]].map(([x,y],i)=>({id:`xm-${i}`,x:origin.x+x,y:origin.y+y,amount:50,spawnedAt:state.serverTime,expiresAt:state.serverTime+300000}));
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(['error','warning'].includes(message.type()))errors.push(message.text())});
+  let attacks=0,moves=0;
+  await mount(page,state);
+  await page.route('**/api/moves',route=>{moves++;return route.abort()});
+  await page.route('**/api/attacks',async route=>{
+    const payload=route.request().postDataJSON().payload;
+    const out=applyCommand(state.world,state.player,{type:'attack',payload},{now:Date.now(),map:state.map,id:randomUUID,random:()=>.5});
+    state.world=out.world;state.player=out.player;state.serverTime=Date.now();attacks++;
+    await route.fulfill({json:{result:out.result,player:out.player,committedSeq:String(attacks+1)}});
+  });
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  await page.getByRole('button',{name:'关闭详情'}).click();
+  for(const [size,width,height] of [['desktop',1440,960],['mobile',390,844]] as const){
+    await page.setViewportSize({width,height});
+    await expect(page).toHaveTitle(/场域战争/);
+    await expect(page.locator('[data-xm-id]')).toHaveCount(6);
+    const point=await center(page);
+    await page.mouse.click(point.x,point.y,{button:'right'});
+    const menu=page.getByRole('menu',{name:'地图快捷操作'});
+    await expect(menu).toBeVisible();
+    const box=await page.locator('svg.world-map').boundingBox();
+    await page.mouse.click(box!.x+20,box!.y+60);
+    await expect(menu).toHaveCount(0);expect(moves).toBe(0);
+    await page.mouse.click(point.x,point.y,{button:'right'});
+    await page.getByRole('menuitem',{name:/侵入攻击/}).click();
+    const weapon=page.getByRole('menuitem',{name:/L1 脉冲器/}),before=attacks;
+    await weapon.click();await expect.poll(()=>attacks).toBe(before+1);
+    await expect(menu).toBeVisible();
+    await expect(weapon).toHaveText(new RegExp(`×${8-attacks}`));
+    await expect(weapon).toBeEnabled({timeout:4000});
+    await weapon.click();await expect.poll(()=>attacks).toBe(before+2);
+    await expect(menu).toBeVisible();
+    await expect(weapon).toHaveText(new RegExp(`×${8-attacks}`));
+    await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+    if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/xm-menu-${size}.png`});
+    await page.getByRole('button',{name:'账号设置'}).click();await expect(menu).toHaveCount(0);
+    await page.getByRole('dialog',{name:'账号信息'}).getByRole('button',{name:'关闭',exact:true}).click();
+    await expect(page.locator('[data-xm-id="xm-0"] circle').first()).toBeVisible();
+    if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/xm-map-${size}.png`});
+  }
+  expect(errors).toEqual([]);expect(moves).toBe(0);
 });
 
 test('自动批量部署高等级优先且可切换固定等级，槽位显示真实部署人',async({page})=>{

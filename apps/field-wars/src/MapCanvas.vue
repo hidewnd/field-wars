@@ -142,7 +142,7 @@ watch(attackMenuOpen, fitMenu);
 function menuAction(kind: string, level?: number) {
   const current = menu.value;
   if (!current) return;
-  closeMenu();
+  if (kind !== 'attack') closeMenu();
   if (kind === 'apply') emit('apply', current.worldX, current.worldY);
   else if (kind === 'point') emit('point', current.worldX, current.worldY);
   else if (kind === 'select' && current.portalId) emit('select', current.portalId);
@@ -229,11 +229,16 @@ function onContext(event: MouseEvent) {
   if (event.button !== 2 && !start) contextAction(event.clientX, event.clientY, event.target);
 }
 function onKey(event: KeyboardEvent) { if (event.key === 'Escape') { onPointerCancel(); closeMenu(); } }
-function onOutside(event: PointerEvent) { if (menu.value && !menuElement.value?.contains(event.target as Node) && !svg.value?.contains(event.target as Node)) closeMenu(); }
+function onOutside(event: PointerEvent) {
+  if (!menu.value || menuElement.value?.contains(event.target as Node)) return;
+  // 捕获阶段也覆盖会 stopPropagation 的地面道具；地图外仍正常响应原控件。
+  if (event.button === 0 && svg.value?.contains(event.target as Node)) { event.preventDefault(); event.stopPropagation(); }
+  closeMenu();
+}
 function focusPortal(id: string) { const portal = props.world.portals[id]; if (portal) jump(portal.x, portal.y); }
 watch(() => props.selectedId, id => { if (id) focusPortal(id); });
-onMounted(() => { resize = new ResizeObserver(entries => { const r = entries[0]?.contentRect; if (r) viewport.value = { width: Math.max(1, r.width), height: Math.max(1, r.height) }; }); if (svg.value) resize.observe(svg.value); window.addEventListener('keydown', onKey); window.addEventListener('blur', onPointerCancel); document.addEventListener('pointerdown', onOutside); });
-onBeforeUnmount(() => { resize?.disconnect(); window.clearTimeout(longPress); window.removeEventListener('keydown', onKey); window.removeEventListener('blur', onPointerCancel); document.removeEventListener('pointerdown', onOutside); });
+onMounted(() => { resize = new ResizeObserver(entries => { const r = entries[0]?.contentRect; if (r) viewport.value = { width: Math.max(1, r.width), height: Math.max(1, r.height) }; }); if (svg.value) resize.observe(svg.value); window.addEventListener('keydown', onKey); window.addEventListener('blur', onPointerCancel); document.addEventListener('pointerdown', onOutside, true); });
+onBeforeUnmount(() => { resize?.disconnect(); window.clearTimeout(longPress); window.removeEventListener('keydown', onKey); window.removeEventListener('blur', onPointerCancel); document.removeEventListener('pointerdown', onOutside, true); });
 defineExpose({ locate, zoom, focusPortal });
 </script>
 
@@ -246,6 +251,12 @@ defineExpose({ locate, zoom, focusPortal });
       </g>
       <g class="link-layer">
         <line v-for="link in world.links" :key="link.id" :x1="world.portals[link.origin]?.x" :y1="world.portals[link.origin]?.y" :x2="world.portals[link.destination]?.x" :y2="world.portals[link.destination]?.y" :stroke="factionColor[link.faction]" :stroke-width="markerSize * .38" stroke-opacity=".7" />
+      </g>
+      <g class="xm-layer" pointer-events="none" aria-label="散落 XM，进入30米范围自动吸收">
+        <g v-for="point in world.groundXm ?? []" :key="point.id" :data-xm-id="point.id" :transform="`translate(${point.x} ${point.y})`">
+          <circle :r="markerSize * 1.1" fill="#9957ef" opacity=".18" />
+          <circle :r="markerSize * .5" fill="#bc79ff" stroke="#fff" :stroke-width="markerSize * .18" />
+        </g>
       </g>
       <g v-if="grouped">
         <g v-for="cluster in clusters" :key="cluster.district.id" class="cluster" :data-cluster-id="cluster.district.id" :transform="`translate(${cluster.x} ${cluster.y})`" tabindex="0" role="button" :aria-label="`${cluster.district.name}，${cluster.count}个据点，点击放大`" @keydown.enter="jump(cluster.x, cluster.y)">

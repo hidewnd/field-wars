@@ -402,17 +402,31 @@ describe('beta-v1 纯规则引擎', () => {
     expect(world.links).toHaveLength(6);
   });
 
-  it('24小时自然衰减令满八脚降到七脚时立即拆相连线场', () => {
+  it('6小时自然衰减令满八脚降到七脚时立即拆相连线场', () => {
     const world = linkedWorld();
     world.portals.A.resonators[0]!.energy = 150;
-    world.portals.A.resonators[0]!.nextDecayAt = 86400000;
-    const due = advanceWorld(world, 86400000);
+    world.portals.A.resonators[0]!.nextDecayAt = 21600000;
+    const due = advanceWorld(world, 21600000);
     expect(due.world.portals.A.resonators.filter(Boolean)).toHaveLength(7);
     expect(due.world.portals.A.faction).toBe('blue');
     expect(due.world.links.map(link => link.id)).toEqual(['B|C', 'D|E', 'E|F', 'D|F']);
     expect(due.world.fields.map(field => field.id)).toEqual(['D|E|F']);
     expect(world.links).toHaveLength(6);
     expect(world.portals.A.resonators[0]?.energy).toBe(150);
+  });
+
+  it('部署满现实6小时扣满能量15%，多周期补算与逐次推进一致且不重复扣减',()=>{
+    const {world,player}=joined();
+    const deployed=doCommand(world,player,'deploy','A',{slot:0,level:1},1234);
+    const first=1234+6*3600000;
+    expect(deployed.world.portals.A.resonators[0]!.nextDecayAt).toBe(first);
+    expect(advanceWorld(deployed.world,first-1).world.portals.A.resonators[0]!.energy).toBe(1000);
+    const once=advanceWorld(deployed.world,first).world;
+    expect(once.portals.A.resonators[0]!.energy).toBe(850);
+    expect(advanceWorld(once,first).world).toEqual(once);
+    const second=first+6*3600000;
+    expect(advanceWorld(deployed.world,second).world).toEqual(advanceWorld(once,second).world);
+    expect(advanceWorld(deployed.world,first+6*6*3600000).world.portals.A.faction).toBeNull();
   });
 
   it('两件护盾叠加减伤且本次伤害取MOD破坏前状态', () => {

@@ -40,7 +40,7 @@ onBeforeUnmount(()=>{if(previousFocus?.isConnected)previousFocus.focus()});
           <div><dt>PO · 据点</dt><dd>地图上的行动节点，可被占领、部署脚、充能及连线。颜色表示所属阵营。</dd></div>
           <div><dt>AP · 成长经验</dt><dd>占领、部署、连线、建场等行动会获得 AP，累积后提升玩家等级。</dd></div>
           <div><dt>L1–L8 · 玩家等级</dt><dd>决定可使用的装备等级和 XM 上限。玩家等级与据点等级是两个不同参数。</dd></div>
-          <div><dt>XM · 行动能量</dt><dd>部署、Hack、攻击等行动消耗 XM。每秒恢复 {{ RULES.player.xmPerSecond }} XM，也可使用糖块或回收装备补充。</dd></div>
+          <div><dt>XM · 行动能量</dt><dd>部署、Hack、攻击等行动消耗 XM。地图上的紫色光点每 {{ RULES.groundXm.refreshIntervalMs/60000 }} 分钟刷新，XM 未满时进入 {{ RULES.interactionRangeCm/100 }} 米范围自动吸收，每点 {{ RULES.groundXm.amount }} XM。每秒仍恢复 {{ RULES.player.xmPerSecond }} XM，也可使用糖块或回收装备补充。</dd></div>
           <div><dt>八脚 · 据点基础</dt><dd>每点 8 个槽位，据点等级按八槽总等级计算。脚有独立能量，降到零会消失；不足八脚会断开相关连线与领域。</dd></div>
           <div><dt>MU · 领域计分值</dt><dd>每 {{ RULES.checkpointMs/60000 }} 分钟，为阵营结算据点与领域收益。MU 参与阵营计分，不是玩家升级经验。</dd></div>
         </dl>
