@@ -4,6 +4,8 @@ import type { BattleEvent, Faction, Item, LevelReward, Portal, Snapshot } from '
 import { RULES, inventoryCount, levelForAp, xmCap } from '../../../shared/rules';
 import { ApiError, errorMessage, command, createSession, events, generateRecoveryCode, get, hasPendingCreate, logout, pendingCommand, recoverSession, resolvePending, revokeSessions, session, snapshot, type CommandReceipt, type PendingCommand } from './api';
 import {appPath} from './paths';
+import {requestId} from './crypto';
+import {playerNameError} from '../../../shared/profile';
 import AdminView from './AdminView.vue';
 import InventoryPanel from './InventoryPanel.vue';
 import MapCanvas from './MapCanvas.vue';
@@ -29,6 +31,9 @@ const loginError = ref('');
 const recoveryCode = ref('');
 const recoveryInput = ref('');
 const recoverOpen = ref(false);
+const createOpen = ref(false);
+const newPlayerName = ref('');
+const newPlayerNameError = computed(() => playerNameError(newPlayerName.value));
 const manualGuideOpen = ref(false);
 const toast = ref('');
 const toastKind = ref<'success'|'error'|'pending'>('success');
@@ -77,6 +82,7 @@ const factionNames: Record<Faction,string> = {red:'红方',green:'绿方',blue:'
 const factionSymbols: Record<Faction,string> = {red:'●',green:'◆',blue:'▲'};
 const battleEvents = computed(() => [...(world.value?.battleEvents ?? [])].reverse());
 function battleText(event: BattleEvent): string {
+  if (event.kind === 'join') return `${factionNames[event.faction]}阵营的${event.actor}加入了战斗`;
   const faction = event.faction === player.value?.faction ? '本阵营' : factionNames[event.faction];
   const names = event.portals.map(id => world.value?.portals[id]?.name ?? '据点');
   if (event.kind === 'score') return `${faction}获得 ${event.amount} 积分`;
@@ -152,7 +158,25 @@ async function bootstrap() {
   } catch(e) { if (!(e instanceof ApiError && (e.code==='UNAUTHORIZED' || e.code==='HTTP_401'))) loginError.value=errorMessage(e); }
   finally { loading.value=false; }
 }
-async function create() { busy.value=true; loginError.value=''; try { const result=await createSession(); recoveryCode.value=result.recoveryCode; await loadSnapshot(); connect(); } catch(e) {loginError.value=errorMessage(e);} finally {busy.value=false;} }
+async function startCreate() {
+  if (hasPendingCreate()) {await create();return;}
+  newPlayerName.value=`玩家${requestId().slice(0,6)}`;
+  loginError.value='';createOpen.value=true;
+  await nextTick();document.getElementById('new-player-name')?.focus();
+}
+async function create() {
+  if (busy.value || (!hasPendingCreate() && newPlayerNameError.value)) return;
+  busy.value=true;loginError.value='';
+  try {
+    const result=await createSession(newPlayerName.value.trim());
+    recoveryCode.value=result.recoveryCode;createOpen.value=false;
+    await loadSnapshot();connect();
+  } catch(e) {
+    loginError.value=errorMessage(e);
+    // 结果未知时返回入口，下次点击只重试原请求，避免编辑名称后误以为创建了另一个账号。
+    if(hasPendingCreate())createOpen.value=false;
+  } finally {busy.value=false;}
+}
 async function recover() { busy.value=true; loginError.value=''; try { const result=await recoverSession(recoveryInput.value.trim()); recoveryCode.value=result.recoveryCode; recoveryInput.value=''; recoverOpen.value=false; await loadSnapshot(); connect(); } catch(e) {loginError.value=errorMessage(e);} finally {busy.value=false;} }
 async function copyCode() {
   if (navigator.clipboard) {
@@ -282,7 +306,20 @@ onBeforeUnmount(()=>{disposed=true;window.clearInterval(clock);window.clearTimeo
   <div v-else-if="loading" class="screen-loading">正在进入场域战争…</div>
   <div v-else-if="!state" class="welcome-screen">
     <div class="welcome-art"><div class="welcome-brand">场域战争</div><h1>在城市之间<br />连接更多可能</h1><p>选择阵营，探索据点，亲手连出第一片领域。</p><div class="welcome-factions"><span>● 红方</span><span>◆ 绿方</span><span>▲ 蓝方</span></div></div>
-    <div class="welcome-card"><h2>{{ recoverOpen ? '恢复身份' : '进入城市' }}</h2><p>{{ recoverOpen ? '输入此前保存的恢复码，找回相同账号。' : '以匿名身份开始。账号创建后请立即保存恢复码。' }}</p><form v-if="recoverOpen" @submit.prevent="recover"><label>恢复码<input v-model="recoveryInput" autocomplete="off" required /></label><button type="submit" class="primary-action" :disabled="busy">恢复账号</button><button type="button" class="text-button" @click="recoverOpen=false">返回</button></form><div v-else><button type="button" class="primary-action" :disabled="busy" @click="create">创建匿名身份</button><button type="button" class="text-button" @click="recoverOpen=true">已有恢复码？恢复身份</button></div><p v-if="loginError" role="alert" class="error-text">{{ loginError }}</p></div>
+    <div class="welcome-card">
+      <h2>{{ recoverOpen ? '恢复身份' : createOpen ? '输入玩家名称' : '进入城市' }}</h2>
+      <p>{{ recoverOpen ? '输入此前保存的恢复码，找回相同账号。' : '以匿名身份开始。账号创建后请立即保存恢复码。' }}</p>
+      <form v-if="recoverOpen" @submit.prevent="recover"><label>恢复码<input v-model="recoveryInput" autocomplete="off" required /></label><button type="submit" class="primary-action" :disabled="busy">恢复账号</button><button type="button" class="text-button" @click="recoverOpen=false">返回</button></form>
+      <form v-else-if="createOpen" @submit.prevent="create">
+        <label for="new-player-name">玩家名称</label>
+        <input id="new-player-name" v-model="newPlayerName" autocomplete="nickname" :disabled="busy" :aria-invalid="!!newPlayerNameError" aria-describedby="new-player-name-hint" required />
+        <p id="new-player-name-hint" :class="{'error-text':!!newPlayerNameError}" aria-live="polite">{{ newPlayerNameError || '支持中英文，最多 20 个字符，可保留默认随机名称。' }}</p>
+        <button type="submit" class="primary-action" :disabled="busy || !!newPlayerNameError">{{ busy ? '创建中…' : '确认名称并进入' }}</button>
+        <button type="button" class="text-button" :disabled="busy" @click="createOpen=false;loginError=''">返回</button>
+      </form>
+      <div v-else><button type="button" class="primary-action" :disabled="busy" @click="startCreate">创建匿名身份</button><button type="button" class="text-button" :disabled="busy" @click="recoverOpen=true;loginError=''">已有恢复码？恢复身份</button></div>
+      <p v-if="loginError" role="alert" class="error-text">{{ loginError }}</p>
+    </div>
   </div>
   <div v-else class="app-shell" :class="{'left-hidden':leftHidden}">
     <header class="topbar">
@@ -320,6 +357,7 @@ onBeforeUnmount(()=>{disposed=true;window.clearInterval(clock);window.clearTimeo
 </template>
 
 <style scoped>
+#new-player-name-hint{margin:8px 0 20px;font-size:13px;line-height:1.6}
 .scores-page .application-row{align-items:center;gap:12px}.scores-page .application-row>span{min-width:0;overflow-wrap:anywhere}.scores-page .application-row>.soft-action{width:auto;min-height:36px;padding:8px 14px;flex:none}
 .player-identity{display:flex;flex-direction:column;gap:4px;min-width:130px}.player-heading{display:flex;align-items:center;gap:7px;min-width:0}.player-level{flex:none;font-size:12px;color:#2366b7}.ap-meter{font-size:10px;color:#6984a5;line-height:1.3}.ap-meter>span{display:block;overflow:hidden;text-overflow:ellipsis}.ap-track{height:4px;margin-top:3px;border-radius:4px;overflow:hidden;background:#e5ecf6}.ap-track i{display:block;height:100%;background:#8b65ca;border-radius:inherit}.player-name{padding:0;border:0;background:none;color:#193e70;text-align:left;font-size:14px;font-weight:700;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-dialog{max-height:calc(100dvh - 32px);overflow-y:auto}.account-dialog .account-id{font-size:12px;color:#7790ae;overflow-wrap:anywhere}.account-dialog>.soft-action{margin-bottom:8px}.guide-tile{display:flex;justify-content:space-between;align-items:center}.guide-tile span{margin-left:auto}
 @media(max-width:700px){.account-summary{display:grid;grid-template-columns:minmax(0,1fr) 24px;gap:3px 4px;padding:0 6px;min-width:0;flex:1;align-content:center}.player-identity{grid-column:1;grid-row:1;min-width:0;gap:1px}.player-heading{gap:4px}.player-level{font-size:10px}.ap-meter{font-size:9px}.ap-track{height:3px;margin-top:1px}.player-name{font-size:11px;max-width:100%}.account-summary .xm-meter{grid-column:1;grid-row:2;width:100%;max-width:150px;font-size:9px;padding-bottom:4px}.account-summary .xm-meter i{height:3px}.account-summary .icon-button{grid-column:2;grid-row:1/3}.account-dialog{padding:22px}.account-dialog h2{font-size:23px}}

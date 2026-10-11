@@ -43,7 +43,7 @@ export async function buildApp(config:Config) {
   try{const session=await auth.authenticate(request);return {player:await store.player(session.id),csrfToken:auth.csrf(session.token),commandEpoch:auth.epoch(session.id)}}
   catch(error){if(error instanceof GameError&&['UNAUTHORIZED','SESSION_EXPIRED'].includes(error.code))return {player:null,csrfToken:'',commandEpoch:''};throw error}
  });
- app.post('/api/anonymous-sessions',async(request,reply)=>auth.anonymous(request,reply,(request.body as {requestId?:unknown})?.requestId as string));
+ app.post('/api/anonymous-sessions',async(request,reply)=>auth.anonymous(request,reply,(request.body as {requestId?:unknown})?.requestId as string,(request.body as {name?:unknown})?.name));
  app.post('/api/account/recover',async(request,reply)=>auth.recover(request,reply,(request.body as {recoveryCode?:unknown})?.recoveryCode as string,(request.body as {requestId?:unknown})?.requestId as string));
  app.post('/api/account/recovery-code',request=>auth.rotateRecovery(request,(request.body as {requestId:string}).requestId));
  app.post('/api/account/logout',(request,reply)=>auth.logout(request,reply));

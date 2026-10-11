@@ -83,13 +83,16 @@ test('匿名建号响应缺失后，刷新以原请求找回只显示一次的�
   let requestId='',posts=0;
   await page.route('**/api/session',route=>route.fulfill({json:{player:null,csrfToken:'',commandEpoch:''}}));
   await page.route('**/api/anonymous-sessions',route=>{
-    const body=route.request().postDataJSON() as {requestId:string};
+    const body=route.request().postDataJSON() as {requestId:string;name:string};
+    expect(body.name).toBe('重试玩家Wind');
     if(requestId) expect(body.requestId).toBe(requestId);
     requestId=body.requestId;posts++;
     return posts===1 ? route.fulfill({status:200,body:''}) : route.fulfill({json:{player,recoveryCode:'cc-new-code',csrfToken:'test',commandEpoch:'test'}});
   });
   await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:5173/');
   await page.getByRole('button',{name:'创建匿名身份'}).click();
+  await page.getByRole('textbox',{name:'玩家名称'}).fill('重试玩家Wind');
+  await page.getByRole('button',{name:'确认名称并进入'}).click();
   await expect(page.getByRole('alert')).toHaveText('响应正文缺失，请使用原请求确认结果');
   await expect(page.getByRole('alert')).not.toContainText('RESULT_UNKNOWN');
   await page.reload();
@@ -126,4 +129,39 @@ test('恢复身份未知结果后，同一恢复码跨刷新沿用原请求 ID',
   await expect(page.getByRole('heading',{name:'保存恢复码'})).toBeVisible();
   expect(posts).toBe(2);
   expect(await page.evaluate(()=>sessionStorage.getItem('junction-beta:pending-recover'))).toBeNull();
+});
+
+for (const mobile of [false,true]) test(`建号先输入预填名称，校验后提交${mobile?'（手机）':'（桌面）'}`,async({page})=>{
+  await page.setViewportSize(mobile?{width:390,height:844}:{width:1440,height:960});
+  const errors:string[]=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',e=>{if(['error','warning'].includes(e.type()))errors.push(e.text())});
+  await page.routeWebSocket('**/api/events',()=>{});
+  await page.route('**/api/session',r=>r.fulfill({json:{player:null,csrfToken:'',commandEpoch:''}}));
+  let submittedName='';
+  await page.route('**/api/anonymous-sessions',r=>{
+    submittedName=r.request().postDataJSON().name;
+    return r.fulfill({json:{player:{...player,name:submittedName},recoveryCode:'local-code',csrfToken:'test',commandEpoch:'test'}});
+  });
+  await page.route('**/api/world/snapshot',r=>r.fulfill({json:{...state,player:{...player,name:submittedName}}}));
+  const url=process.env.BASE_URL ?? 'http://127.0.0.1:5173/';
+  await page.goto(url);await expect(page).toHaveURL(url);await expect(page).toHaveTitle(/场域战争/);
+  await page.getByRole('button',{name:'创建匿名身份'}).click();
+  await expect(page.getByRole('heading',{name:'输入玩家名称'})).toBeVisible();
+  const name=page.getByRole('textbox',{name:'玩家名称'}),submit=page.getByRole('button',{name:'确认名称并进入'});
+  await expect(name).toBeFocused();await expect(name).toHaveValue(/^玩家[0-9a-f]{6}$/);
+  const defaultName=await name.inputValue();
+  expect(submittedName).toBe('');await expect(submit).toBeEnabled();
+  await name.fill(' ');await expect(submit).toBeDisabled();
+  await name.fill('星'.repeat(21));await expect(submit).toBeDisabled();
+  await expect(page.getByText('玩家名称最多 20 个字符')).toBeVisible();
+  await name.fill(mobile?' 新玩家Wind ':defaultName);await expect(submit).toBeEnabled();
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/join-name-${mobile?'mobile':'desktop'}.png`});
+  await submit.click();
+  await expect(page.getByRole('heading',{name:'保存恢复码'})).toBeVisible();
+  expect(submittedName).toBe(mobile?'新玩家Wind':defaultName);
+  await expect(page.getByRole('button',{name:'修改玩家名称'})).toHaveText(submittedName);
+  expect(errors).toEqual([]);
 });

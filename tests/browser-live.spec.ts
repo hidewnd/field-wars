@@ -10,6 +10,7 @@ test('Docker 部署的匿名入口与响应式城市地图', async ({page}) => {
   page.on('pageerror',error=>errors.push(error.message));
   await page.goto(base!);
   await page.getByRole('button',{name:'创建匿名身份'}).click();
+  await page.getByRole('button',{name:'确认名称并进入'}).click();
   await expect(page.getByRole('heading',{name:'保存恢复码'})).toBeVisible();
   await page.getByRole('button',{name:'我已保存'}).click();
   await page.getByRole('button',{name:'◆ 绿方'}).click();

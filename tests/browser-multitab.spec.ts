@@ -8,6 +8,7 @@ test('同一浏览器两个标签共享阵营背包与移动状态',async({page,
   test.skip(!base,'仅在指定 Compose 地址时执行');
   await page.goto(base!);
   await page.getByRole('button',{name:'创建匿名身份'}).click();
+  await page.getByRole('button',{name:'确认名称并进入'}).click();
   await page.getByRole('button',{name:'我已保存'}).click();
   const second=await context.newPage();
   await second.goto(base!);

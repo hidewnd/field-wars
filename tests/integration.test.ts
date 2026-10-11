@@ -193,6 +193,35 @@ suite('独立 PostgreSQL 的 HTTP 集成验收', () => {
     expect((await snapshot(bob)).player.id).not.toBe(alice.player.id);
   });
 
+  it('建号保存名称，重放保留原名称；选阵营播报一次并持久化给旁观玩家', async () => {
+    const requestId=randomUUID();
+    const response=await app.inject({method:'POST',url:'/api/anonymous-sessions',headers:{origin},payload:{requestId,name:' 新玩家Wind '}});
+    expect(response.statusCode,response.body).toBe(200);
+    const body=response.json();
+    expect(body.player.name).toBe('新玩家Wind');
+    const repeated=await app.inject({method:'POST',url:'/api/anonymous-sessions',headers:{origin},payload:{requestId,name:'重试不能改名'}});
+    expect(repeated.json().player).toEqual(body.player);
+    const alice:Session={cookie:String(response.headers['set-cookie']).split(';')[0],csrf:body.csrfToken,recoveryCode:body.recoveryCode,player:body.player};
+    const observer=await createSession();
+    const before=await snapshot(alice),choice=envelope(before,{faction:'blue'});
+    expect(before.world.battleEvents ?? []).toEqual([]);
+    const first=await command(alice,'/api/faction',choice);
+    expect(first.statusCode,first.body).toBe(200);
+    expect((await command(alice,'/api/faction',choice)).json()).toEqual(first.json());
+    const feed=(await snapshot(observer)).world.battleEvents;
+    expect(feed).toMatchObject([{kind:'join',faction:'blue',actor:'新玩家Wind'}]);
+    await app.close();
+    app=await buildApp({databaseUrl:databaseUrl!,secret,adminPassword,origin,cookieSecure:false,port:0,host:'127.0.0.1'});
+    expect((await snapshot(observer)).world.battleEvents).toEqual(feed);
+  });
+
+  it.each(['', '星'.repeat(21), '风\nWind', null, 42])('建号拒绝非法名称：%s', async name => {
+    const response=await app.inject({method:'POST',url:'/api/anonymous-sessions',headers:{origin},payload:{requestId:randomUUID(),name}});
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe('INVALID_INPUT');
+    expect((await pool.query('SELECT count(*)::int AS count FROM accounts')).rows[0].count).toBe(0);
+  });
+
   it('升级礼包与占领战报原子持久化；并发重放与重启不会重复发放', async () => {
     const owner=await createSession(), observer=await createSession();await chooseFaction(owner);
     const portal=BETA_MAP.portals[0];
