@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import map from '../maps/beta-v1.json' with { type: 'json' };
 import type { Portal, Snapshot } from '../shared/types';
 import {applyCommand, GameError} from '../shared/engine';
+import {refreshGroundXm} from '../shared/ground-xm';
 import {randomUUID} from 'node:crypto';
 
 test.use({ channel: process.env.PLAYWRIGHT_CHANNEL ?? undefined, viewport: { width: 1440, height: 960 } });
@@ -48,7 +49,7 @@ async function center(page: Page, id = origin.id) {
 // 浏览器通过真实规则引擎更新内存快照，用于核对界面提交参数与操作后的显示。
 async function gameActions(page: Page, state: Snapshot) {
   const submitted:{type:string;payload:Record<string,unknown>}[]=[];
-  await page.route(url=>/\/api\/(faction|account\/(rename|guide-read)|inventory\/(drop|pickup|recycle)|portals\/[^/]+\/(deploy|deploy-all|upgrade))$/.test(url.pathname),async route=>{
+  await page.route(url=>/\/api\/(faction|account\/(rename|guide-read)|inventory\/(drop|pickup|recycle)|portals\/[^/]+\/(deploy|deploy-all|upgrade|recharge))$/.test(url.pathname),async route=>{
     const path=new URL(route.request().url()).pathname.split('/');
     const type=path.at(-1)!,payload=route.request().postDataJSON().payload;
     submitted.push({type,payload});
@@ -110,6 +111,7 @@ test('菜单外点击只收起菜单，连续攻击保留菜单并更新库存�
   for(const [size,width,height] of [['desktop',1440,960],['mobile',390,844]] as const){
     await page.setViewportSize({width,height});
     await expect(page).toHaveTitle(/场域战争/);
+    for(let i=0;i<5;i++)await page.getByRole('button',{name:'放大地图',exact:true}).click();
     await expect(page.locator('[data-xm-id]')).toHaveCount(6);
     const point=await center(page);
     await page.mouse.click(point.x,point.y,{button:'right'});
@@ -593,4 +595,91 @@ test('新玩家保存恢复码并选阵营后自动展示说明，关闭已读�
   await page.getByRole('button',{name:/玩法说明/}).click();await expect(guide).toBeVisible();
   await guide.getByRole('button',{name:'关闭玩法说明'}).click();await expect(guide).toHaveCount(0);
   expect(submitted.map(item=>item.type)).toEqual(['faction','guide-read']);
+});
+
+
+test('等级位于名称左侧，经验条按当前等级区间显示并兼容满级与手机',async({page})=>{
+  const state=fixture();state.player.ap=2250;state.player.name='这是二十个字的角色名称用于检查手机布局效果';
+  await mount(page,state);
+  const meter=page.getByRole('progressbar',{name:'等级经验'});
+  await page.setViewportSize({width:320,height:740});
+  for(const [ap,level,label,percent] of [[0,'L1','AP 0 / 500','0'],[2250,'L2','AP 1,750 / 3,500','50'],[4000,'L3','AP 0 / 10,000','0'],[240000,'L8','AP 240,000 · 已满级','100']] as const){
+    state.player.ap=ap;await page.reload();
+    await expect(page.locator('.player-level')).toHaveText(level);
+    await expect(meter).toHaveAttribute('aria-valuetext',label);
+    await expect(meter).toHaveAttribute('aria-valuenow',percent);
+    expect(await meter.locator('span').evaluate(node=>node.getBoundingClientRect().right)).toBeLessThanOrEqual((await page.getByRole('button',{name:'账号设置',exact:true}).boundingBox())!.x);
+  }
+  state.player.ap=2250;state.player.xm=4000;await page.reload();
+  if(await page.getByRole('button',{name:'收起侧栏'}).isVisible())await page.getByRole('button',{name:'收起侧栏'}).click();
+  for(const [size,width,height] of [['desktop',1440,960],['mobile',390,844],['small-mobile',320,740]] as const){
+    await page.setViewportSize({width,height});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const name=await page.locator('.player-name').boundingBox(),level=await page.locator('.player-level').boundingBox(),bar=await meter.boundingBox();
+    expect(level!.x+level!.width).toBeLessThanOrEqual(name!.x);
+    expect(Math.abs(level!.y+level!.height/2-name!.y-name!.height/2)).toBeLessThan(2);
+    expect(bar!.y).toBeGreaterThanOrEqual(name!.y+name!.height);
+    const settings=await page.getByRole('button',{name:'账号设置',exact:true}).boundingBox();
+    expect(bar!.x+bar!.width).toBeLessThanOrEqual(settings!.x);
+    expect(settings!.x+settings!.width).toBeLessThanOrEqual(width);
+    expect(await meter.locator('span').evaluate(node=>node.getBoundingClientRect().right)).toBeLessThanOrEqual(settings!.x);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+    if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/experience-${size}.png`});
+  }
+});
+
+test('背包KEY定位远方PO并远程充能，不移动或消耗KEY，重复点击仍定位',async({page})=>{
+  const state=fixture(),errors:string[]=[];
+  const far=state.world.portals[target.id],dx=origin.x+150000-far.x,dy=origin.y+50000-far.y;
+  far.x+=dx;far.y+=dy;far.resonators.forEach(r=>{if(r){r.x+=dx;r.y+=dy}});
+  state.player.ap=2250;state.player.xm=4000;
+  state.player.inventory.find(i=>i.type==='key')!.protected=true;
+  refreshGroundXm(state.world,state.map,state.serverTime);
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(['error','warning'].includes(message.type()))errors.push(message.text())});
+  let moves=0;await page.route('**/api/moves',route=>{moves++;return route.fulfill({json:{}})});
+  await mount(page,state);const submitted=await gameActions(page,state);
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  for(const [size,width,height] of [['desktop',1440,960],['mobile',390,844]] as const){
+    await page.setViewportSize({width,height});
+    await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:/背包/}).click();
+    await page.getByRole('button',{name:`定位据点 ${target.name}`,exact:true}).click();
+    await expect(page).toHaveURL(/127.0.0.1:5174/);
+    await expect(page).toHaveTitle(/场域战争/);
+    await expect(page.getByRole('heading',{name:target.name,exact:true})).toBeVisible();
+    await expect(page.locator('.distance-line')).toContainText('持有 Key · 可远程充能');
+    const point=await center(page,target.id),box=await page.locator('svg.world-map').boundingBox();
+    expect(point.x).toBeGreaterThan(box!.x);expect(point.x).toBeLessThan(box!.x+box!.width);
+    expect(point.y).toBeGreaterThan(box!.y);expect(point.y).toBeLessThan(box!.y+box!.height);
+    if(size==='mobile')await expect.poll(async()=> (await center(page,target.id)).y < (await page.getByRole('complementary',{name:'据点详情'}).boundingBox())!.y).toBe(true);
+    await expect(page.locator(`[data-portal-id="${target.id}"] circle[stroke="#286ee5"]`)).toBeVisible();
+    await expect(page.getByRole('button',{name:'全部充能 远程充能 · 无需前往',exact:true})).toBeEnabled();
+    await expect(page.locator('[data-xm-id]')).toHaveCount(0);
+    for(let i=0;i<5;i++)await page.getByRole('button',{name:'放大地图',exact:true}).click();
+    await expect(page.locator('[data-xm-id]')).toHaveCount(2000);
+    await expect(page.locator('.xm-layer [stroke]')).toHaveCount(0);
+    await expect(page.locator('.xm-layer circle')).toHaveCount(2000);
+    await expect(page.locator('.xm-layer circle').first()).toHaveAttribute('fill','url(#xm-glow)');
+    await page.getByRole('button',{name:'缩小地图',exact:true}).click();
+    await expect(page.locator('[data-xm-id]')).toHaveCount(0);
+    await page.getByRole('button',{name:'放大地图',exact:true}).click();
+    await expect(page.locator('[data-xm-id]')).toHaveCount(2000);
+    await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+    if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/key-focus-${size}.png`});
+  }
+  const originalPosition={x:state.player.x,y:state.player.y},keys=structuredClone(state.player.inventory.filter(i=>i.type==='key'));
+  await page.getByRole('button',{name:'全部充能 远程充能 · 无需前往',exact:true}).click();
+  await expect(page.locator('.toast')).toHaveText('操作成功');
+  expect(submitted).toHaveLength(1);expect(submitted[0].type).toBe('recharge');
+  expect(submitted[0].payload.generations).toEqual(Object.fromEntries(Array.from({length:8},(_,i)=>[i,`g-${i}`])));
+  expect(state.world.portals[target.id].resonators[2]!.energy).toBe(1000);
+  expect(state.player.xm).toBeLessThan(4000);
+  expect(state.player.inventory.filter(i=>i.type==='key')).toEqual(keys);
+  expect({x:state.player.x,y:state.player.y}).toEqual(originalPosition);expect(state.player.movement).toBeNull();expect(moves).toBe(0);
+  state.player.movement={from:originalPosition,to:{x:origin.x+20000,y:origin.y},startAt:Date.now(),arriveAt:Date.now()+60000};
+  await page.reload();await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:/背包/}).click();
+  await page.getByRole('button',{name:`定位据点 ${target.name}`,exact:true}).click();
+  await expect(page.getByRole('button',{name:/全部充能/})).toBeDisabled();
+  expect(errors).toEqual([]);
 });

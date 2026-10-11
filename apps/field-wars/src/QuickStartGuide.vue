@@ -40,14 +40,14 @@ onBeforeUnmount(()=>{if(previousFocus?.isConnected)previousFocus.focus()});
           <div><dt>PO · 据点</dt><dd>地图上的行动节点，可被占领、部署脚、充能及连线。颜色表示所属阵营。</dd></div>
           <div><dt>AP · 成长经验</dt><dd>占领、部署、连线、建场等行动会获得 AP，累积后提升玩家等级。</dd></div>
           <div><dt>L1–L8 · 玩家等级</dt><dd>决定可使用的装备等级和 XM 上限。玩家等级与据点等级是两个不同参数。</dd></div>
-          <div><dt>XM · 行动能量</dt><dd>部署、Hack、攻击等行动消耗 XM。地图上的紫色光点每 {{ RULES.groundXm.refreshIntervalMs/60000 }} 分钟刷新，XM 未满时进入 {{ RULES.interactionRangeCm/100 }} 米范围自动吸收，每点 {{ RULES.groundXm.amount }} XM。每秒仍恢复 {{ RULES.player.xmPerSecond }} XM，也可使用糖块或回收装备补充。</dd></div>
+          <div><dt>XM · 行动能量</dt><dd>部署、Hack、攻击等行动消耗 XM。地图放大到最大倍数时显示淡紫色 XM 光点，每 {{ RULES.groundXm.refreshIntervalMs/60000 }} 分钟刷新，XM 未满时进入 {{ RULES.interactionRangeCm/100 }} 米范围自动吸收，每点 {{ RULES.groundXm.amount }} XM，PO 周围 {{ RULES.groundXm.portalRadiusCm/100 }} 米内每批生成 {{ RULES.groundXm.perPortal }} 点。每秒仍恢复 {{ RULES.player.xmPerSecond }} XM，也可使用糖块或回收装备补充。</dd></div>
           <div><dt>八脚 · 据点基础</dt><dd>每点 8 个槽位，据点等级按八槽总等级计算。脚有独立能量，降到零会消失；不足八脚会断开相关连线与领域。</dd></div>
           <div><dt>MU · 领域计分值</dt><dd>每 {{ RULES.checkpointMs/60000 }} 分钟，为阵营结算据点与领域收益。MU 参与阵营计分，不是玩家升级经验。</dd></div>
         </dl>
         <div v-else-if="section==='actions'" class="action-list">
           <article><h3>移动与地图</h3><p>左键点空白处移动或改道；移动中右键停止。拖动平移、滚轮缩放；手机可长按打开快捷菜单。</p></article>
           <article><h3>侵入攻击</h3><p>静止时右键或长按地图，展开第一项“侵入攻击”，选择背包中的攻击器等级。攻击从玩家当前位置发出，消耗攻击器和 XM。</p></article>
-          <article><h3>充能与维护</h3><p>靠近友方据点可充能，持有本点 Key 可远程充能。脚每 {{ RULES.resonators.decayIntervalMs/3600000 }} 小时衰减其等级满能量的 {{ RULES.resonators.decayPercent }}%，记得定期维护。</p></article>
+          <article><h3>充能与维护</h3><p>靠近友方据点可充能，持有本点 Key 可在静止时远程充能，不消耗 Key；点击背包中的 Key 名称可定位到对应据点。脚每 {{ RULES.resonators.decayIntervalMs/3600000 }} 小时衰减其等级满能量的 {{ RULES.resonators.decayPercent }}%，记得定期维护。</p></article>
           <article><h3>背包与拾取</h3><p>背包上限 {{ RULES.player.inventoryLimit }} 件，满包先使用、回收或丢弃。落地道具可在 {{ RULES.interactionRangeCm/100 }} 米内拾取；受保护的 Key 不能丢弃或回收。</p></article>
           <article><h3>糖块与冷却</h3><p>糖块每级最多恢复 {{ RULES.items.cubeRecoveryPerLevel }} XM，回收与使用效果相同；超出能量上限的部分会浪费。行动存在冷却，以按钮提示为准。</p></article>
         </div>

@@ -2,7 +2,6 @@ import {describe, expect, it} from 'vitest';
 import {absorbGroundXm, refreshGroundXm} from '../shared/ground-xm.js';
 import {applyCommand, createPlayer, createWorld, refreshPlayer} from '../shared/engine.js';
 import {BETA_MAP} from '../shared/map.js';
-import {RULES} from '../shared/rules.js';
 import type {GroundXm} from '../shared/types.js';
 
 function fixture() {
@@ -16,11 +15,11 @@ describe('共享地面 XM',()=>{
   it('现实五分钟一批，PO 周边与随机点有界且同批重试相同，重启不刷回已领取点',()=>{
     const {world}=fixture();refreshGroundXm(world,BETA_MAP,1);
     const points=structuredClone(world.groundXm!);
-    expect(points).toHaveLength(Object.keys(world.portals).length*6+200);
+    expect(points).toHaveLength(Object.keys(world.portals).length*18+200);
     expect(new Set(points.map(p=>p.id)).size).toBe(points.length);
     expect(points.every(p=>p.amount===50 && p.x>=0 && p.x<=BETA_MAP.width && p.y>=0 && p.y<=BETA_MAP.height)).toBe(true);
     const portals=Object.values(world.portals).sort((a,b)=>a.id.localeCompare(b.id));
-    portals.forEach((portal,index)=>expect(points.slice(index*6,index*6+6).every(p=>Math.hypot(p.x-portal.x,p.y-portal.y)<=RULES.groundXm.portalRadiusCm+1)).toBe(true));
+    portals.forEach((portal,index)=>expect(points.slice(index*18,index*18+18).every(p=>Math.hypot(p.x-portal.x,p.y-portal.y)<=4501)).toBe(true));
     world.groundXm!.shift();const restarted=JSON.parse(JSON.stringify(world));
     refreshGroundXm(restarted,BETA_MAP,299999);expect(restarted.groundXm).toEqual(points.slice(1));
     const fresh=createWorld(BETA_MAP,0);refreshGroundXm(fresh,BETA_MAP,1);expect(fresh.groundXm).toEqual(points);

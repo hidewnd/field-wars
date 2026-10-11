@@ -27,6 +27,7 @@ const distance = computed(() => Math.ceil(distanceCm.value / 100));
 const near = computed(() => distanceCm.value <= RULES.interactionRangeCm && !props.player.movement);
 const own = computed(() => props.portal.faction === props.player.faction && !!props.player.faction);
 const keys = computed(() => props.player.inventory.filter(i => i.type === 'key' && i.portalId === props.portal.id).reduce((count, item) => count + item.quantity, 0));
+const remoteRecharge = computed(() => !near.value && own.value && keys.value > 0 && !props.player.movement);
 const keyItem = computed(() => props.player.inventory.find(i => i.type === 'key' && i.portalId === props.portal.id));
 const maxLevel = computed(() => levelForAp(props.player.ap));
 const portalLevelValue = computed(() => portalLevel(props.portal));
@@ -77,7 +78,7 @@ function act(kind: string, payload: Record<string, unknown> = {}) { emit('action
       <div><h2>{{ portal.name }}</h2><p><span class="faction-indicator" :class="portal.faction ?? 'neutral'">{{ portal.faction === 'red' ? '●' : portal.faction === 'green' ? '◆' : portal.faction === 'blue' ? '▲' : '○' }}</span>{{ portal.faction === 'red' ? '红方' : portal.faction === 'green' ? '绿方' : portal.faction === 'blue' ? '蓝方' : '中立' }} · L{{ portalLevelValue }} · {{ distance }} 米</p></div>
       <button type="button" class="icon-button" aria-label="关闭详情" @click="emit('close')">×</button>
     </header>
-    <div class="distance-line">{{ portal.districtId }} <span>{{ player.movement ? '移动中，请先停止' : near ? '可交互' : '距交互范围较远' }}</span></div>
+    <div class="distance-line">{{ portal.districtId }} <span>{{ player.movement ? '移动中，请先停止' : near ? '可交互' : remoteRecharge ? '持有 Key · 可远程充能' : '距交互范围较远' }}</span></div>
     <nav class="tabs" aria-label="据点信息">
       <button type="button" :class="{active:tab==='point'}" @click="tab='point'">据点</button>
       <button type="button" :class="{active:tab==='resources'}" @click="tab='resources'">资源</button>
@@ -106,7 +107,7 @@ function act(kind: string, payload: Record<string, unknown> = {}) { emit('action
           <div class="quick-actions">
             <button type="button" :disabled="busy || !near || hackWait>0 || inventoryCount(player.inventory)>=500" @click="act('hack')">Hack <small>{{ hackWait ? `${hackWait} 秒后可用` : '获取资源' }}</small></button>
             <button type="button" :disabled="busy || !near || filled===8 || (!!portal.faction && !own)" @click="act('deploy-all',deployLevel ? {level:deployLevel} : {})">批量部署 <small>{{ deployLevel ? `固定 L${deployLevel} 脚` : '按背包等级从高到低' }}</small></button>
-            <button type="button" :disabled="busy || !own || rechargeWait>0 || !filled || (!near && !keys)" @click="act('recharge',{amount})">全部充能 <small>{{ rechargeWait ? `${rechargeWait} 秒后可用` : '恢复脚能量' }}</small></button>
+            <button type="button" :disabled="busy || !!player.movement || !own || rechargeWait>0 || !filled || (!near && !keys)" @click="act('recharge',{amount})">全部充能 <small>{{ rechargeWait ? `${rechargeWait} 秒后可用` : remoteRecharge ? '远程充能 · 无需前往' : '恢复脚能量' }}</small></button>
             <button type="button" :disabled="busy" @click="tab='links'">连线 <small>查看可连据点</small></button>
           </div>
           <div class="level-picker"><label for="deploy-level">批量部署等级</label><select id="deploy-level" v-model.number="deployLevel"><option :value="0">自动 · 从高到低</option><option v-for="n in maxLevel" :key="n" :value="n">固定 L{{ n }}</option></select></div>
@@ -118,7 +119,7 @@ function act(kind: string, payload: Record<string, unknown> = {}) { emit('action
         </section>
       </template>
       <template v-else-if="tab === 'resources'">
-        <section class="panel-section"><h3>充能</h3><p class="muted">远程充能需持有本点 Key；本地充能无需 Key。</p><div class="inline-controls"><label>投入 XM <input v-model.number="amount" type="number" min="1" max="1000" step="100" /></label><button type="button" :disabled="busy || !own || rechargeWait>0 || !portal.resonators[slot] || (!near && !keys)" @click="act('recharge',{slot,amount})">{{ rechargeWait ? `冷却 ${rechargeWait} 秒` : '充能选中脚' }}</button></div><button type="button" class="soft-action" :disabled="busy || !own || rechargeWait>0 || !filled || (!near && !keys)" @click="act('recharge',{amount})">全部充能</button></section>
+        <section class="panel-section"><h3>充能</h3><p class="muted">静止时可为友方据点充能。远程需持有本点 Key，不消耗 Key；本地无需 Key。</p><div class="inline-controls"><label>投入 XM <input v-model.number="amount" type="number" min="1" max="1000" step="100" /></label><button type="button" :disabled="busy || !!player.movement || !own || rechargeWait>0 || !portal.resonators[slot] || (!near && !keys)" @click="act('recharge',{slot,amount})">{{ rechargeWait ? `冷却 ${rechargeWait} 秒` : '充能选中脚' }}</button></div><button type="button" class="soft-action" :disabled="busy || !!player.movement || !own || rechargeWait>0 || !filled || (!near && !keys)" @click="act('recharge',{amount})">全部充能</button></section>
         <section class="panel-section"><h3>MOD（{{ modFilled }} / 4）</h3><div class="mod-list"><div v-for="(mod,index) in portal.mods" :key="index">{{ index+1 }}. {{ mod ? modNames[mod.type] : '空槽' }}</div></div><div class="inline-controls"><select v-model="modType" aria-label="选择 MOD 类型"><option value="shield">护盾</option><option value="heatsink">散热片</option><option value="multihack">多次 Hack</option></select><button type="button" :disabled="busy || !near || !own || modFilled>=4" @click="act('mod',{type:modType})">安装 MOD</button></div></section>
         <section class="panel-section"><h3>相关背包</h3><div v-if="!ownItems.length" class="empty-state">没有本点 Key 或可用装备</div><div v-for="item in ownItems" :key="`${item.type}-${item.level}-${item.portalId}-${!!item.protected}`" class="inventory-row"><span>{{ itemName(item) }} <small v-if="item.level">L{{ item.level }}</small><small v-if="item.protected"> · 已保护</small></span><b>×{{ item.quantity }}</b></div><div v-if="keyItem" class="inline-controls"><span>保护本点 Key</span><button type="button" :disabled="busy" @click="act('protect-key',{portalId:portal.id,protected:!keyItem.protected})">{{ keyItem.protected ? '取消保护' : '保护' }}</button></div></section>
       </template>

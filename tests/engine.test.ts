@@ -348,6 +348,23 @@ describe('beta-v1 纯规则引擎', () => {
     expect(out.world.portals.A.resonators[0]?.nextDecayAt).toBe(86_400_000);
   });
 
+  it('远程充能必须持有目标Key，保护Key可用且不消耗，移动和敌方仍拒绝', () => {
+    const {world,player}=joined();const portal=world.portals.B;portal.faction='red';
+    portal.resonators[0]={level:1,energy:500,owner:'p',x:portal.x,y:portal.y,generation:'key-test',nextDecayAt:86400000};
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('KEY_REQUIRED');
+    player.inventory.push({type:'key',level:1,portalId:'A',quantity:1});
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('KEY_REQUIRED');
+    player.inventory.push({type:'key',level:1,portalId:'B',quantity:1,protected:true});
+    const out=doCommand(world,player,'recharge','B',{amount:1000});
+    expect(out.world.portals.B.resonators[0]!.energy).toBe(1000);
+    expect(out.player.inventory).toEqual(player.inventory);expect(out.player.movement).toBeNull();
+    expect(out.player.x).toBe(player.x);expect(out.player.y).toBe(player.y);
+    portal.faction='blue';
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('NOT_FRIENDLY');
+    portal.faction='red';player.movement={from:{x:player.x,y:player.y},to:{x:portal.x,y:portal.y},startAt:0,arriveAt:10000};
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('MOVING');
+  });
+
   it('充能generation不匹配时不扣XM，全部充能检查八槽版本', () => {
     const {world, player} = joined();
     const portal = world.portals.A; portal.faction = 'red'; player.xm = 1000;
