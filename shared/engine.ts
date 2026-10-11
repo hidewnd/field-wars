@@ -3,6 +3,7 @@ import {distanceSquared, withinRange} from './geometry.js';
 import {validateLinkTarget} from './linking.js';
 import {RULES, inventoryCount, levelForAp, portalLevel, xmCap} from './rules.js';
 import {playerNameError} from './profile.js';
+import {absorbGroundXm} from './ground-xm.js';
 
 const ENERGY = RULES.resonators.energy;
 const QUOTA = RULES.resonators.quotaPerPlayerPerPortal;
@@ -373,6 +374,7 @@ export function applyCommand(world: World, player: Player, command: GameCommand,
   // false仅供数据库事务内的私有世界副本使用；普通调用仍克隆，以保证失败不修改入参。
   const w = copyWorld ? structuredClone(world) : world;
   const p = refreshPlayer(player, ctx.now);
+  absorbGroundXm(w, player, p, ctx.now);
   const payload = command.payload ?? {};
   const previousFaction = command.portalId ? w.portals[command.portalId]?.faction : undefined;
   let result: Record<string, unknown>;

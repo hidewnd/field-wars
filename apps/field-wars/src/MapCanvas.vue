@@ -25,6 +25,7 @@ const groundItems = computed(() => groundPiles.value.find(pile => pile.id === se
 const itemNames = {resonator:'共鸣脚',pulse:'脉冲器',cube:'糖块',key:'据点 Key',shield:'护盾',heatsink:'散热片',multihack:'多次 Hack'};
 const viewport = ref({ width: 900, height: 720 });
 const center = ref({ x: props.player.x, y: props.player.y });
+const minimumSpan = 28000;
 const span = ref(window.matchMedia('(max-width: 700px)').matches ? 60000 : 90000);
 const dragging = ref(false);
 const hoveredId = ref<string | null>(null);
@@ -95,7 +96,7 @@ function color(portal: Portal) { return portal.faction ? factionColor[portal.fac
 function fieldPoints(field: Field) { return field.vertices.map(id => { const p = props.world.portals[id]; return `${p?.x ?? 0},${p?.y ?? 0}`; }).join(' '); }
 function closeMenu() { menu.value = null; attackMenuOpen.value = false; }
 function jump(x: number, y: number) { closeMenu(); center.value = { x, y }; span.value = Math.min(span.value, 380000); }
-function zoom(factor: number) { closeMenu(); span.value = Math.max(28000, Math.min(2200000, span.value * factor)); }
+function zoom(factor: number) { closeMenu(); span.value = Math.max(minimumSpan, Math.min(2200000, span.value * factor)); }
 function locate() { jump(playerPosition.value.x, playerPosition.value.y); }
 function toPoint(event: PointerEvent | MouseEvent) {
   const rect = svg.value!.getBoundingClientRect();
@@ -142,7 +143,7 @@ watch(attackMenuOpen, fitMenu);
 function menuAction(kind: string, level?: number) {
   const current = menu.value;
   if (!current) return;
-  closeMenu();
+  if (kind !== 'attack') closeMenu();
   if (kind === 'apply') emit('apply', current.worldX, current.worldY);
   else if (kind === 'point') emit('point', current.worldX, current.worldY);
   else if (kind === 'select' && current.portalId) emit('select', current.portalId);
@@ -229,11 +230,16 @@ function onContext(event: MouseEvent) {
   if (event.button !== 2 && !start) contextAction(event.clientX, event.clientY, event.target);
 }
 function onKey(event: KeyboardEvent) { if (event.key === 'Escape') { onPointerCancel(); closeMenu(); } }
-function onOutside(event: PointerEvent) { if (menu.value && !menuElement.value?.contains(event.target as Node) && !svg.value?.contains(event.target as Node)) closeMenu(); }
+function onOutside(event: PointerEvent) {
+  if (!menu.value || menuElement.value?.contains(event.target as Node)) return;
+  // 捕获阶段也覆盖会 stopPropagation 的地面道具；地图外仍正常响应原控件。
+  if (event.button === 0 && svg.value?.contains(event.target as Node)) { event.preventDefault(); event.stopPropagation(); }
+  closeMenu();
+}
 function focusPortal(id: string) { const portal = props.world.portals[id]; if (portal) jump(portal.x, portal.y); }
 watch(() => props.selectedId, id => { if (id) focusPortal(id); });
-onMounted(() => { resize = new ResizeObserver(entries => { const r = entries[0]?.contentRect; if (r) viewport.value = { width: Math.max(1, r.width), height: Math.max(1, r.height) }; }); if (svg.value) resize.observe(svg.value); window.addEventListener('keydown', onKey); window.addEventListener('blur', onPointerCancel); document.addEventListener('pointerdown', onOutside); });
-onBeforeUnmount(() => { resize?.disconnect(); window.clearTimeout(longPress); window.removeEventListener('keydown', onKey); window.removeEventListener('blur', onPointerCancel); document.removeEventListener('pointerdown', onOutside); });
+onMounted(() => { resize = new ResizeObserver(entries => { const r = entries[0]?.contentRect; if (r) viewport.value = { width: Math.max(1, r.width), height: Math.max(1, r.height) }; }); if (svg.value) resize.observe(svg.value); window.addEventListener('keydown', onKey); window.addEventListener('blur', onPointerCancel); document.addEventListener('pointerdown', onOutside, true); });
+onBeforeUnmount(() => { resize?.disconnect(); window.clearTimeout(longPress); window.removeEventListener('keydown', onKey); window.removeEventListener('blur', onPointerCancel); document.removeEventListener('pointerdown', onOutside, true); });
 defineExpose({ locate, zoom, focusPortal });
 </script>
 
@@ -241,11 +247,24 @@ defineExpose({ locate, zoom, focusPortal });
   <div class="map-wrap" @dragstart.prevent>
     <img class="map-background" :src="appPath('/city-background.svg')" alt="" :style="backgroundStyle" />
     <svg ref="svg" class="world-map" :viewBox="viewBox" role="img" aria-label="场域战争地图，左键空白处移动或改道，移动中右键停止；左键或右键拖动平移、滚轮缩放、点击据点查看，静止时右键或长按打开快捷操作" @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerCancel" @lostpointercapture="onPointerCancel" @wheel="onWheel" @contextmenu="onContext">
+      <defs>
+        <radialGradient id="xm-glow">
+          <stop offset="0" stop-color="#eee0ff" />
+          <stop offset=".28" stop-color="#d6b8f5" stop-opacity=".95" />
+          <stop offset=".6" stop-color="#c7a0eb" stop-opacity=".5" />
+          <stop offset="1" stop-color="#c7a0eb" stop-opacity="0" />
+        </radialGradient>
+      </defs>
       <g class="field-layer">
         <polygon v-for="field in world.fields" :key="field.id" :data-field-id="field.id" :points="fieldPoints(field)" :fill="factionColor[field.faction]" fill-opacity=".16" :stroke="factionColor[field.faction]" :stroke-width="markerSize * .35" stroke-opacity=".55" />
       </g>
       <g class="link-layer">
         <line v-for="link in world.links" :key="link.id" :x1="world.portals[link.origin]?.x" :y1="world.portals[link.origin]?.y" :x2="world.portals[link.destination]?.x" :y2="world.portals[link.destination]?.y" :stroke="factionColor[link.faction]" :stroke-width="markerSize * .38" stroke-opacity=".7" />
+      </g>
+      <g v-if="span === minimumSpan" class="xm-layer" pointer-events="none" aria-label="散落 XM，进入30米范围自动吸收">
+        <g v-for="point in world.groundXm ?? []" :key="point.id" :data-xm-id="point.id" :transform="`translate(${point.x} ${point.y})`">
+          <circle :r="markerSize" fill="url(#xm-glow)" />
+        </g>
       </g>
       <g v-if="grouped">
         <g v-for="cluster in clusters" :key="cluster.district.id" class="cluster" :data-cluster-id="cluster.district.id" :transform="`translate(${cluster.x} ${cluster.y})`" tabindex="0" role="button" :aria-label="`${cluster.district.name}，${cluster.count}个据点，点击放大`" @keydown.enter="jump(cluster.x, cluster.y)">

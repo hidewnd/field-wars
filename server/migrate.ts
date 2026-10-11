@@ -6,6 +6,7 @@ import {digest,readConfig} from './config.js';
 import {BETA_MAP,validateBetaMap} from '../shared/map.js';
 import {RULES} from '../shared/rules.js';
 import {createWorld} from '../shared/engine.js';
+import {refreshGroundXm} from '../shared/ground-xm.js';
 
 export async function migrate(databaseUrl:string):Promise<void> {
  const pool=new Pool({connectionString:databaseUrl}); const client=await pool.connect();
@@ -27,7 +28,7 @@ export async function migrate(databaseUrl:string):Promise<void> {
   const row=(await client.query('SELECT rules_hash,map_hash FROM worlds WHERE id=1 FOR UPDATE')).rows[0];
   if(row && (row.rules_hash!==digest(RULES)||row.map_hash!==digest(BETA_MAP))) throw new Error('规则或地图与既有世界不一致，需显式迁移');
   if(!row){
-   const world=createWorld(BETA_MAP,Date.now()); const {portals,...state}=world;
+   const world=createWorld(BETA_MAP,Date.now()); refreshGroundXm(world,BETA_MAP,world.logicalAt); const {portals,...state}=world;
    await client.query('INSERT INTO worlds(id,rules_hash,map_hash,state) VALUES(1,$1,$2,$3)',[digest(RULES),digest(BETA_MAP),state]);
    await client.query('INSERT INTO portals(id,state) SELECT p->>\'id\',p FROM jsonb_array_elements($1::jsonb) p',[JSON.stringify(Object.values(portals))]);
   }

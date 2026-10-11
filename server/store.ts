@@ -4,9 +4,10 @@ import {randomUUID,createHmac} from 'node:crypto';
 import {BETA_MAP} from '../shared/map.js';
 import {RULES} from '../shared/rules.js';
 import {applyCommand,advanceWorld,GameError,refreshPlayer} from '../shared/engine.js';
+import {absorbGroundXm,refreshGroundXm} from '../shared/ground-xm.js';
 import type {World,Player,GameCommand,CommandEnvelope,DueResult} from '../shared/types.js';
 import {digest} from './config.js';
-export interface Transaction {client:PoolClient;world:World;before:World;now:number;seq:string;actorPlayer?:Player;playerUpdate?:Player;alerts?:{accountId:string;portalId:string;count:number;at:number}[]}
+export interface Transaction {client:PoolClient;world:World;before:World;now:number;seq:string;actorPlayer?:Player;playerUpdate?:Player;playerUpdates?:Player[];alerts?:{accountId:string;portalId:string;count:number;at:number}[]}
 export class Store {
  readonly pool:Pool; readonly events=new EventEmitter();
  private tail:Promise<unknown>=Promise.resolve(); private queued=0; private epoch=''; private cache:World|null=null;
@@ -126,27 +127,50 @@ export class Store {
   // 合并一次命令的写入往返，仍由同一连接上的显式事务和同步 COMMIT 保证原子持久性。
   const result=await tx.client.query(`WITH portal_write AS (
    INSERT INTO portals(id,state) SELECT p->>'id',p FROM jsonb_array_elements($1::jsonb) p ON CONFLICT(id) DO UPDATE SET state=EXCLUDED.state
-  ), player_write AS (UPDATE accounts SET state=$2::jsonb WHERE id=$3::uuid),
-  world_write AS (UPDATE worlds SET state=$4::jsonb,seq=$5::bigint WHERE id=1 AND epoch=$6::bigint RETURNING seq),
-  event_write AS (INSERT INTO outbox(seq,event,created_at) SELECT seq,$7::jsonb,$8::bigint FROM world_write),
+  ), player_write AS (UPDATE accounts a SET state=p FROM jsonb_array_elements($2::jsonb) p WHERE a.id=(p->>'id')::uuid),
+  world_write AS (UPDATE worlds SET state=$3::jsonb,seq=$4::bigint WHERE id=1 AND epoch=$5::bigint RETURNING seq),
+  event_write AS (INSERT INTO outbox(seq,event,created_at) SELECT seq,$6::jsonb,$7::bigint FROM world_write),
   receipt_write AS (INSERT INTO command_receipts(actor,request_id,digest,result,seq,created_at)
-   SELECT $9::text,$10::uuid,$11::text,$12::jsonb,seq,$8::bigint FROM world_write WHERE $9::text IS NOT NULL)
-  SELECT seq::text FROM world_write`,[JSON.stringify(changed),tx.playerUpdate?JSON.stringify(tx.playerUpdate):null,tx.playerUpdate?.id??null,
+   SELECT $8::text,$9::uuid,$10::text,$11::jsonb,seq,$7::bigint FROM world_write WHERE $8::text IS NOT NULL)
+  SELECT seq::text FROM world_write`,[JSON.stringify(changed),JSON.stringify(tx.playerUpdate?[tx.playerUpdate]:tx.playerUpdates??[]),
    JSON.stringify(state),tx.seq,this.epoch,JSON.stringify({type:'invalidate',committedSeq:tx.seq,deleted,privateAlerts:tx.alerts??[]}),tx.now,
    receipt?.actor??null,receipt?.id??null,receipt?.digest??null,JSON.stringify(value??null)]);
   if(result.rowCount!==1)throw new GameError('WORLD_RECOVERING','执行器已交接');
  }
  async persistDue(tx:Transaction,due:DueResult){
   tx.world=due.world;
+  refreshGroundXm(tx.world,BETA_MAP,tx.now);
   for(const cp of due.checkpoints)await tx.client.query('INSERT INTO checkpoints(season_id,checkpoint_index,at_ms,scores) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',[cp.seasonId,cp.index,cp.at,cp.scores]);
   for(const s of due.seasons)await tx.client.query('INSERT INTO seasons(id,start_at,end_at,scores) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',[s.id,s.startAt,s.endAt,s.scores]);
  }
- private hasDue(world:World,now:number){return world.nextCheckpoint<=now||world.season.endAt<=now||Object.values(world.portals).some(p=>p.resonators.some(r=>r&&r.nextDecayAt<=now))}
+ private hasDue(world:World,now:number){return (world.nextGroundXmAt??0)<=now||world.nextCheckpoint<=now||world.season.endAt<=now||Object.values(world.portals).some(p=>p.resonators.some(r=>r&&r.nextDecayAt<=now))}
  async tick(){
   if(this.stopping)return;
-  const w=this.cache;const now=Date.now();
-  if(w && !this.recovering && w.nextCheckpoint>now && w.season.endAt>now && !Object.values(w.portals).some(p=>p.resonators.some(r=>r&&r.nextDecayAt<=now))) return;
-  await this.transaction(async tx=>{await this.persistDue(tx,advanceWorld(tx.world,tx.now));return null});
+  const w=this.cache;const now=Math.max(Date.now(),w?.logicalAt??0);
+  const onlineIds=Array.from(this.online.keys());
+  const players=(await this.pool.query("SELECT state FROM accounts WHERE id=ANY($1::uuid[]) OR state->'movement'<>'null'::jsonb ORDER BY id",[onlineIds])).rows.map(row=>row.state as Player);
+  // 无资源变更时不制造世界序号和广播；这里只做预检，真正领取须在世界锁内重读。
+  if(w && !this.recovering && !this.hasDue(w,now)) {
+   const preview=structuredClone(w);
+   if(!players.some(player=>{
+    // 预检读取期间可能已有命令提交，或系统时钟回拨；不得倒退玩家时间。
+    const at=Math.max(now,player.energyAt);
+    return (player.movement && player.movement.arriveAt<=at)||absorbGroundXm(preview,player,refreshPlayer(player,at),at)>0;
+   }))return;
+  }
+  await this.transaction(async tx=>{
+   if(this.hasDue(tx.world,tx.now))await this.persistDue(tx,advanceWorld(tx.world,tx.now));
+   if(tx.world.maintenance)return null;
+   const rows=await tx.client.query('SELECT state FROM accounts WHERE id=ANY($1::uuid[]) ORDER BY id',[players.map(player=>player.id)]);
+   tx.playerUpdates=[];
+   for(const row of rows.rows){
+    const previous=row.state as Player,player=refreshPlayer(previous,tx.now);
+    const restored=absorbGroundXm(tx.world,previous,player,tx.now);
+    // 到达后落盘清除移动状态，避免已完成旅途永久参与每秒扫描。
+    if(restored>0 || (previous.movement && !player.movement)){player.version++;tx.playerUpdates.push(player)}
+   }
+   return null;
+  });
  }
  async command(actor:string,envelope:CommandEnvelope,command:GameCommand,verifyEpoch:()=>void|Promise<void>){
   const hash=digest({envelope,command});const key=actor+':'+envelope.requestId;

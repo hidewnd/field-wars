@@ -348,6 +348,23 @@ describe('beta-v1 纯规则引擎', () => {
     expect(out.world.portals.A.resonators[0]?.nextDecayAt).toBe(86_400_000);
   });
 
+  it('远程充能必须持有目标Key，保护Key可用且不消耗，移动和敌方仍拒绝', () => {
+    const {world,player}=joined();const portal=world.portals.B;portal.faction='red';
+    portal.resonators[0]={level:1,energy:500,owner:'p',x:portal.x,y:portal.y,generation:'key-test',nextDecayAt:86400000};
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('KEY_REQUIRED');
+    player.inventory.push({type:'key',level:1,portalId:'A',quantity:1});
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('KEY_REQUIRED');
+    player.inventory.push({type:'key',level:1,portalId:'B',quantity:1,protected:true});
+    const out=doCommand(world,player,'recharge','B',{amount:1000});
+    expect(out.world.portals.B.resonators[0]!.energy).toBe(1000);
+    expect(out.player.inventory).toEqual(player.inventory);expect(out.player.movement).toBeNull();
+    expect(out.player.x).toBe(player.x);expect(out.player.y).toBe(player.y);
+    portal.faction='blue';
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('NOT_FRIENDLY');
+    portal.faction='red';player.movement={from:{x:player.x,y:player.y},to:{x:portal.x,y:portal.y},startAt:0,arriveAt:10000};
+    expect(rejectedCode(()=>doCommand(world,player,'recharge','B',{amount:1000}))).toBe('MOVING');
+  });
+
   it('充能generation不匹配时不扣XM，全部充能检查八槽版本', () => {
     const {world, player} = joined();
     const portal = world.portals.A; portal.faction = 'red'; player.xm = 1000;
@@ -402,17 +419,31 @@ describe('beta-v1 纯规则引擎', () => {
     expect(world.links).toHaveLength(6);
   });
 
-  it('24小时自然衰减令满八脚降到七脚时立即拆相连线场', () => {
+  it('6小时自然衰减令满八脚降到七脚时立即拆相连线场', () => {
     const world = linkedWorld();
     world.portals.A.resonators[0]!.energy = 150;
-    world.portals.A.resonators[0]!.nextDecayAt = 86400000;
-    const due = advanceWorld(world, 86400000);
+    world.portals.A.resonators[0]!.nextDecayAt = 21600000;
+    const due = advanceWorld(world, 21600000);
     expect(due.world.portals.A.resonators.filter(Boolean)).toHaveLength(7);
     expect(due.world.portals.A.faction).toBe('blue');
     expect(due.world.links.map(link => link.id)).toEqual(['B|C', 'D|E', 'E|F', 'D|F']);
     expect(due.world.fields.map(field => field.id)).toEqual(['D|E|F']);
     expect(world.links).toHaveLength(6);
     expect(world.portals.A.resonators[0]?.energy).toBe(150);
+  });
+
+  it('部署满现实6小时扣满能量15%，多周期补算与逐次推进一致且不重复扣减',()=>{
+    const {world,player}=joined();
+    const deployed=doCommand(world,player,'deploy','A',{slot:0,level:1},1234);
+    const first=1234+6*3600000;
+    expect(deployed.world.portals.A.resonators[0]!.nextDecayAt).toBe(first);
+    expect(advanceWorld(deployed.world,first-1).world.portals.A.resonators[0]!.energy).toBe(1000);
+    const once=advanceWorld(deployed.world,first).world;
+    expect(once.portals.A.resonators[0]!.energy).toBe(850);
+    expect(advanceWorld(once,first).world).toEqual(once);
+    const second=first+6*3600000;
+    expect(advanceWorld(deployed.world,second).world).toEqual(advanceWorld(once,second).world);
+    expect(advanceWorld(deployed.world,first+6*6*3600000).world.portals.A.faction).toBeNull();
   });
 
   it('两件护盾叠加减伤且本次伤害取MOD破坏前状态', () => {
