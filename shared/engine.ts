@@ -597,6 +597,8 @@ export function applyCommand(world: World, player: Player, command: GameCommand,
     }
     if (levelRewards.length) result.levelRewards = levelRewards;
     if (p.faction) {
+      // 首次选定阵营才算加入战斗，与阵营及新手包一同提交，恢复登录不重复播报。
+      if (command.type === 'faction') recordBattle(w, {id: ctx.id(), at: ctx.now, faction: p.faction, actor: p.name, kind: 'join', portals: []});
       if (['deploy', 'deploy-all'].includes(command.type) && previousFaction === null && command.portalId) {
         recordBattle(w, {id: ctx.id(), at: ctx.now, faction: p.faction, actor: p.name, kind: 'capture', portals: [command.portalId]});
       }

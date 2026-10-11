@@ -55,15 +55,19 @@ export async function session(): Promise<SessionResponse> { return get('/api/ses
 const pendingCreateKey='junction-beta:pending-create';
 const pendingRecoverKey='junction-beta:pending-recover';
 export function hasPendingCreate():boolean {return !!sessionStorage.getItem(pendingCreateKey);}
-export async function createSession(): Promise<SessionResponse & { recoveryCode: string }> {
-  const requestId=sessionStorage.getItem(pendingCreateKey) ?? newRequestId();
-  sessionStorage.setItem(pendingCreateKey,requestId);
+export async function createSession(name?: string): Promise<SessionResponse & { recoveryCode: string }> {
+  const saved=sessionStorage.getItem(pendingCreateKey);
+  // 名称与请求标识一起保存，断网或刷新重放时保持原正文；兼容升级前尚未确认的请求标识。
+  const body: {requestId:string;name?:string}=saved
+    ? (saved.startsWith('{') ? JSON.parse(saved) : {requestId:saved})
+    : {requestId:newRequestId(),...(name === undefined ? {} : {name})};
+  sessionStorage.setItem(pendingCreateKey,JSON.stringify(body));
   try {
     let result:SessionResponse & {recoveryCode:string};
-    try {result=await post('/api/anonymous-sessions',{requestId});}
+    try {result=await post('/api/anonymous-sessions',body);}
     catch(error) {
       if (error instanceof ApiError) throw error;
-      result=await post('/api/anonymous-sessions',{requestId});
+      result=await post('/api/anonymous-sessions',body);
     }
     if (!result.recoveryCode) throw new ApiError('RESULT_UNKNOWN','恢复码未返回，请使用原请求确认');
     sessionStorage.removeItem(pendingCreateKey);

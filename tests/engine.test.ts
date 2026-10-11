@@ -46,6 +46,17 @@ function linkedWorld(): World {
 }
 
 describe('beta-v1 纯规则引擎', () => {
+  it.each(['red','green','blue'])('首次选择 %s 阵营记录加入战报，重复选择不产生新战报', faction => {
+    const world=createWorld(map,0),player=createPlayer('new','新玩家Wind',0,points[0]);
+    expect(world.battleEvents ?? []).toEqual([]);
+    const out=doCommand(world,player,'faction',undefined,{faction},100);
+    expect(out.world.battleEvents).toEqual([{id:expect.any(String),at:100,kind:'join',faction,actor:'新玩家Wind',portals:[]}]);
+    expect(rejectedCode(()=>doCommand(out.world,out.player,'faction',undefined,{faction},200))).toBe('FACTION_LOCKED');
+    expect(out.world.battleEvents).toHaveLength(1);
+    const renamed=doCommand(out.world,out.player,'rename',undefined,{name:'后来改名'},200);
+    expect(renamed.world.battleEvents).toEqual(out.world.battleEvents);
+  });
+
   it.each(['风', 'Wind', '星'.repeat(20), 'W'.repeat(20), '探索者Wind2026', '𠮷'.repeat(20)])('改名支持中英文与20字符边界：%s', name => {
     const {world,player}=joined();
     const out=doCommand(world,player,'rename',undefined,{name:` ${name} `});
@@ -577,9 +588,9 @@ describe('高阶掉落、逐级礼包与公共战报', () => {
     const out=doCommand(world,player,'deploy','A',{level:1});
     expect(out.result.levelRewards).toEqual([{level:2,items:[{type:'pulse',level:2,quantity:20},{type:'resonator',level:2,quantity:20},{type:'cube',level:2,quantity:10}]}]);
     expect(out.player.inventory.reduce((n,i)=>n+i.quantity,0)).toBe(549);
-    expect(out.world.battleEvents).toMatchObject([{kind:'capture',actor:'玩家',faction:'red',portals:['A']}]);
+    expect(out.world.battleEvents?.filter(e=>e.kind==='capture')).toMatchObject([{kind:'capture',actor:'玩家',faction:'red',portals:['A']}]);
     const next=doCommand(out.world,out.player,'deploy','A',{level:1});
-    expect(next.result.levelRewards).toBeUndefined();expect(next.world.battleEvents).toHaveLength(1);
+    expect(next.result.levelRewards).toBeUndefined();expect(next.world.battleEvents?.filter(e=>e.kind==='capture')).toHaveLength(1);
     expect(player.inventory).toEqual([{type:'resonator',level:1,quantity:500}]);
   });
   it('同一次攻击跨越多级逐级发包，攻击每个命中据点均有战报',()=>{

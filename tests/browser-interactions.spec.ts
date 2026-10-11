@@ -576,6 +576,7 @@ test('新玩家保存恢复码并选阵营后自动展示说明，关闭已读�
   const submitted=await gameActions(page,state);
   await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:5174/');
   await page.getByRole('button',{name:'创建匿名身份'}).click();
+  await page.getByRole('button',{name:'确认名称并进入'}).click();
   const guide=page.getByRole('dialog',{name:'玩法说明'});
   await expect(page.getByRole('dialog',{name:'保存恢复码'})).toBeVisible();
   await expect(guide).toHaveCount(0);
@@ -681,5 +682,28 @@ test('背包KEY定位远方PO并远程充能，不移动或消耗KEY，重复点
   await page.reload();await page.getByRole('navigation',{name:'主导航'}).getByRole('button',{name:/背包/}).click();
   await page.getByRole('button',{name:`定位据点 ${target.name}`,exact:true}).click();
   await expect(page.getByRole('button',{name:/全部充能/})).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+
+test('在线玩家收到新玩家加入战报，刷新与手机保留阵营和名称且不重复',async({page})=>{
+  const state=fixture();
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',e=>{if(['error','warning'].includes(e.type()))errors.push(e.text())});
+  let invalidate:()=>void=()=>{throw new Error('WebSocket 未连接')};
+  await mount(page,state);
+  await page.routeWebSocket('**/api/events',socket=>{invalidate=()=>socket.send(JSON.stringify({type:'invalidate',committedSeq:state.world.seq,deliverySeq:1}));});
+  await page.reload();
+  const feed=page.getByRole('region',{name:'实时战报'});
+  await expect(feed).toContainText('战场暂时平静');
+  state.world.battleEvents=(['red','green','blue'] as const).map((faction,index)=>({id:`join-${index}`,at:Date.now(),kind:'join',faction,actor:['赤羽','绿叶','新玩家Wind'][index],portals:[]}));
+  state.world.seq='2';invalidate();
+  for(const text of ['红方阵营的赤羽加入了战斗','绿方阵营的绿叶加入了战斗','蓝方阵营的新玩家Wind加入了战斗'])await expect(feed.getByText(text,{exact:true})).toBeVisible();
+  await expect(feed.getByRole('listitem')).toHaveCount(3);
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/join-feed-desktop.png`});
+  await page.setViewportSize({width:390,height:844});await page.reload();
+  await expect(feed.getByRole('listitem')).toHaveCount(3);
+  await expect(feed.getByText('蓝方阵营的新玩家Wind加入了战斗',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/join-feed-mobile.png`});
   expect(errors).toEqual([]);
 });

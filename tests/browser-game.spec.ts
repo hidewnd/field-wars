@@ -49,6 +49,7 @@ test('真实 Compose 浏览器完成 A→B→C→A 首场并在刷新后保留',
   test.skip(!base,'仅在指定 Compose 地址时执行');
   await page.goto(base!);
   await page.getByRole('button',{name:'创建匿名身份'}).click();
+  await page.getByRole('button',{name:'确认名称并进入'}).click();
   await page.getByRole('button',{name:'我已保存'}).click();
   await page.getByRole('button',{name:'▲ 蓝方'}).click();
   const initial=await page.evaluate(async()=>await (await fetch('/api/world/snapshot')).json()) as Snapshot;

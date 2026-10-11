@@ -3,6 +3,7 @@ import '@fastify/cookie';
 import type {FastifyReply, FastifyRequest} from 'fastify';
 import {BETA_MAP} from '../shared/map.js';
 import {createPlayer, GameError} from '../shared/engine.js';
+import {playerNameError} from '../shared/profile.js';
 import type {Player} from '../shared/types.js';
 import {isAllowedOrigin, type Config} from './config.js';
 import type {Store} from './store.js';
@@ -99,9 +100,13 @@ export class Auth {
     if (typeof value !== 'string' || !equal(value, this.epoch(id))) throw new GameError('COMMAND_EPOCH_CHANGED', '执行器已更新，请刷新页面');
   }
 
-  async anonymous(req: FastifyRequest, reply: FastifyReply, requestId: string): Promise<{player: Player; recoveryCode?: string; csrfToken: string; commandEpoch: string}> {
+  async anonymous(req: FastifyRequest, reply: FastifyReply, requestId: string, name?: unknown): Promise<{player: Player; recoveryCode?: string; csrfToken: string; commandEpoch: string}> {
     this.origin(req);
     if (!validRequestId(requestId)) throw new GameError('INVALID_INPUT', '请求标识无效');
+    if (name !== undefined) {
+      const error = playerNameError(name);
+      if (error) throw new GameError('INVALID_INPUT', error);
+    }
     const existing = await this.authenticate(req).catch((error: unknown) => {
       if (error instanceof GameError && error.code === 'UNAUTHORIZED') return null;
       throw error;
@@ -132,7 +137,7 @@ export class Auth {
         if (!spawn) throw new GameError('MAP_INVALID', '地图缺少出生点');
         counts[spawn.id] = [...candidates[0].times, tx.now];
         await tx.client.query("INSERT INTO operations(name,value) VALUES('birthCounts',$1) ON CONFLICT(name) DO UPDATE SET value=EXCLUDED.value", [counts]);
-        const player = createPlayer(id, `玩家${id.slice(0, 6)}`, tx.now, spawn);
+        const player = createPlayer(id, name === undefined ? `玩家${id.slice(0, 6)}` : (name as string).trim(), tx.now, spawn);
         await tx.client.query('INSERT INTO accounts(id,state,recovery_hash,init_hash,created_at) VALUES($1,$2,$3,$4,$5)',
           [id, player, hash(recoveryCode), initHash, tx.now]);
         row = {id, state: player};
