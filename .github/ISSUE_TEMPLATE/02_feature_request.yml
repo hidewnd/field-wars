@@ -1,0 +1,45 @@
+name: 功能建议
+description: 提议新玩法、体验优化或开发维护改进。
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先搜索已有建议。优先描述遇到的问题和使用场景，再提出方案。
+        涉及玩法平衡、资产变更或数据库设计的调整，请在实现前先讨论边界。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与使用场景
+      description: 谁在什么场景下遇到了什么困难？现有方式为什么不足？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案与范围
+      description: 描述希望出现的行为，以及这次不需要解决的问题。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 给出可观察、可验证的结果；涉及界面时可附草图或参考图。
+      placeholder: |
+        - 在……情况下，玩家可以……
+        - 原有……行为保持不变。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案与影响
+      description: 已考虑的替代方案，以及对玩法平衡、现有账号资产、性能、兼容性或部署的影响；无已知影响也可说明。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已搜索已有 Issue，确认没有相同建议，或已说明差异。
+          required: true

@@ -1,0 +1,28 @@
+name: 使用与开发提问
+description: 询问玩法、配置、部署或参与开发的方法。
+title: "[Question] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先查看 README、游戏内玩法说明和已有 Issue。
+        请勿粘贴密码、恢复码、Cookie、令牌或完整 .env。
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题与目标
+      description: 说明你想完成什么、具体卡在哪里。
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: 已阅读的说明与尝试
+      description: 提供已尝试的方法及结果，便于避免重复建议。
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 版本、环境与补充信息
+      description: 按需提供版本、系统、浏览器或部署方式，以及脱敏截图或日志。

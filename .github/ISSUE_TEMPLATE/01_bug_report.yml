@@ -1,0 +1,56 @@
+name: 问题反馈
+description: 报告可以复现的游戏、界面或部署问题。
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先搜索已有 Issue。一个 Issue 聚焦一个问题；无法稳定复现时，请写明发生时间、频率及已知条件。
+        请勿提交恢复码、Cookie、会话令牌、密码、完整 .env 或未脱敏的玩家信息。
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 实际表现与预期行为
+      description: 说明做了什么、实际发生了什么，以及你预期的结果。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 提供最短操作步骤；涉及游戏规则时补充等级、阵营、距离、移动状态和相关道具。
+      placeholder: |
+        1. 打开……
+        2. 点击……
+        3. 出现……
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本与访问入口
+      description: 填提交号或 version.json 中的版本号，以及入口路径；无法获取版本时填写“不确定”。
+      placeholder: "提交号 / 前端版本；本地、内网或公网入口（去除敏感查询参数）"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 界面问题填写系统、浏览器版本和屏幕尺寸；部署问题填写 Node.js、Docker Compose 和 PostgreSQL 版本等相关信息。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图、日志与影响范围
+      description: 可附脱敏截图、错误信息、发生时间（含时区）、是否影响其他玩家及临时解决办法。请区分观察与推测。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已搜索已有 Issue，并补充了可用的复现信息。
+          required: true
+        - label: 我已移除恢复码、凭据和其他敏感信息。
+          required: true
