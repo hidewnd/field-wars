@@ -44,6 +44,10 @@ compose.yaml           本机完整部署
 compose.server.yaml    192.168.3.61 的服务器覆盖配置
 ```
 
+## 参与开发与问题反馈
+
+`main` 是默认稳定分支，`dev` 用于日常开发与集成；普通 PR 指向 `dev`，发布 PR 从 `dev` 指向 `main`。请先阅读[贡献指南](CONTRIBUTING.md)，按 [Issue 表单](https://github.com/hidewnd/field-wars/issues/new/choose)提供复现信息或功能验收标准，并在 PR 中说明变更、验证和迁移风险。
+
 ## 本地运行
 
 ### Docker 一键启动
