@@ -1,0 +1,19 @@
+node_modules
+**/node_modules
+**/dist
+.env
+.env.*
+.git
+.DS_Store
+archive
+*.zip
+*.log
+
+# 服务器持久化数据与私有证书
+/data/
+/tls/
+/backups/
+/docs/
+/review-evidence/
+/test-results/
+/playwright-report/

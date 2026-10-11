@@ -1,0 +1,4387 @@
+{
+  "version": "beta-v1",
+  "width": 2000000,
+  "height": 1600000,
+  "districts": [
+    {
+      "id": "D-01",
+      "name": "北望区",
+      "bounds": [
+        0,
+        0,
+        400000,
+        400000
+      ]
+    },
+    {
+      "id": "D-02",
+      "name": "星桥区",
+      "bounds": [
+        400000,
+        0,
+        800000,
+        400000
+      ]
+    },
+    {
+      "id": "D-03",
+      "name": "云台区",
+      "bounds": [
+        800000,
+        0,
+        1200000,
+        400000
+      ]
+    },
+    {
+      "id": "D-04",
+      "name": "松原区",
+      "bounds": [
+        1200000,
+        0,
+        1600000,
+        400000
+      ]
+    },
+    {
+      "id": "D-05",
+      "name": "晨光区",
+      "bounds": [
+        1600000,
+        0,
+        2000000,
+        400000
+      ]
+    },
+    {
+      "id": "D-06",
+      "name": "西苑区",
+      "bounds": [
+        0,
+        400000,
+        400000,
+        800000
+      ]
+    },
+    {
+      "id": "D-07",
+      "name": "书院区",
+      "bounds": [
+        400000,
+        400000,
+        800000,
+        800000
+      ]
+    },
+    {
+      "id": "D-08",
+      "name": "中央区",
+      "bounds": [
+        800000,
+        400000,
+        1200000,
+        800000
+      ]
+    },
+    {
+      "id": "D-09",
+      "name": "东庭区",
+      "bounds": [
+        1200000,
+        400000,
+        1600000,
+        800000
+      ]
+    },
+    {
+      "id": "D-10",
+      "name": "银杉区",
+      "bounds": [
+        1600000,
+        400000,
+        2000000,
+        800000
+      ]
+    },
+    {
+      "id": "D-11",
+      "name": "花港区",
+      "bounds": [
+        0,
+        800000,
+        400000,
+        1200000
+      ]
+    },
+    {
+      "id": "D-12",
+      "name": "青石区",
+      "bounds": [
+        400000,
+        800000,
+        800000,
+        1200000
+      ]
+    },
+    {
+      "id": "D-13",
+      "name": "环城区",
+      "bounds": [
+        800000,
+        800000,
+        1200000,
+        1200000
+      ]
+    },
+    {
+      "id": "D-14",
+      "name": "晴川区",
+      "bounds": [
+        1200000,
+        800000,
+        1600000,
+        1200000
+      ]
+    },
+    {
+      "id": "D-15",
+      "name": "新城区",
+      "bounds": [
+        1600000,
+        800000,
+        2000000,
+        1200000
+      ]
+    },
+    {
+      "id": "D-16",
+      "name": "南屏区",
+      "bounds": [
+        0,
+        1200000,
+        400000,
+        1600000
+      ]
+    },
+    {
+      "id": "D-17",
+      "name": "竹影区",
+      "bounds": [
+        400000,
+        1200000,
+        800000,
+        1600000
+      ]
+    },
+    {
+      "id": "D-18",
+      "name": "艺廊区",
+      "bounds": [
+        800000,
+        1200000,
+        1200000,
+        1600000
+      ]
+    },
+    {
+      "id": "D-19",
+      "name": "长风区",
+      "bounds": [
+        1200000,
+        1200000,
+        1600000,
+        1600000
+      ]
+    },
+    {
+      "id": "D-20",
+      "name": "远景区",
+      "bounds": [
+        1600000,
+        1200000,
+        2000000,
+        1600000
+      ]
+    }
+  ],
+  "spawns": [
+    {
+      "id": "S-01",
+      "districtId": "D-01",
+      "x": 229200,
+      "y": 136700
+    },
+    {
+      "id": "S-02",
+      "districtId": "D-02",
+      "x": 669500,
+      "y": 166200
+    },
+    {
+      "id": "S-03",
+      "districtId": "D-03",
+      "x": 1003900,
+      "y": 150800
+    },
+    {
+      "id": "S-04",
+      "districtId": "D-04",
+      "x": 1314300,
+      "y": 217000
+    },
+    {
+      "id": "S-05",
+      "districtId": "D-05",
+      "x": 1771700,
+      "y": 133600
+    },
+    {
+      "id": "S-06",
+      "districtId": "D-06",
+      "x": 211600,
+      "y": 607800
+    },
+    {
+      "id": "S-07",
+      "districtId": "D-07",
+      "x": 552000,
+      "y": 618000
+    },
+    {
+      "id": "S-08",
+      "districtId": "D-08",
+      "x": 1027200,
+      "y": 641500
+    },
+    {
+      "id": "S-09",
+      "districtId": "D-09",
+      "x": 1328500,
+      "y": 585200
+    },
+    {
+      "id": "S-10",
+      "districtId": "D-10",
+      "x": 1860400,
+      "y": 574400
+    },
+    {
+      "id": "S-11",
+      "districtId": "D-11",
+      "x": 303900,
+      "y": 950500
+    },
+    {
+      "id": "S-12",
+      "districtId": "D-12",
+      "x": 488700,
+      "y": 978900
+    },
+    {
+      "id": "S-13",
+      "districtId": "D-13",
+      "x": 1079400,
+      "y": 1013900
+    },
+    {
+      "id": "S-14",
+      "districtId": "D-14",
+      "x": 1356400,
+      "y": 997400
+    },
+    {
+      "id": "S-15",
+      "districtId": "D-15",
+      "x": 1772300,
+      "y": 1109500
+    },
+    {
+      "id": "S-16",
+      "districtId": "D-16",
+      "x": 192100,
+      "y": 1446900
+    },
+    {
+      "id": "S-17",
+      "districtId": "D-17",
+      "x": 590100,
+      "y": 1392400
+    },
+    {
+      "id": "S-18",
+      "districtId": "D-18",
+      "x": 914700,
+      "y": 1418100
+    },
+    {
+      "id": "S-19",
+      "districtId": "D-19",
+      "x": 1289400,
+      "y": 1426300
+    },
+    {
+      "id": "S-20",
+      "districtId": "D-20",
+      "x": 1816000,
+      "y": 1391100
+    }
+  ],
+  "portals": [
+    {
+      "id": "PO-01-01",
+      "name": "北望区核心点01",
+      "districtId": "D-01",
+      "role": "core",
+      "x": 246000,
+      "y": 156900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-01-02",
+      "name": "北望区核心点02",
+      "districtId": "D-01",
+      "role": "core",
+      "x": 257500,
+      "y": 160300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-01-03",
+      "name": "北望区核心点03",
+      "districtId": "D-01",
+      "role": "core",
+      "x": 248900,
+      "y": 168500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-01-04",
+      "name": "北望区卫星点04",
+      "districtId": "D-01",
+      "role": "satellite",
+      "x": 258400,
+      "y": 204800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-01-05",
+      "name": "北望区卫星点05",
+      "districtId": "D-01",
+      "role": "satellite",
+      "x": 289000,
+      "y": 172900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-02-01",
+      "name": "星桥区核心点01",
+      "districtId": "D-02",
+      "role": "core",
+      "x": 671500,
+      "y": 126500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-02-02",
+      "name": "星桥区核心点02",
+      "districtId": "D-02",
+      "role": "core",
+      "x": 682000,
+      "y": 132300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-02-03",
+      "name": "星桥区核心点03",
+      "districtId": "D-02",
+      "role": "core",
+      "x": 671700,
+      "y": 138500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-02-04",
+      "name": "星桥区卫星点04",
+      "districtId": "D-02",
+      "role": "satellite",
+      "x": 720400,
+      "y": 126000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-02-05",
+      "name": "星桥区卫星点05",
+      "districtId": "D-02",
+      "role": "satellite",
+      "x": 666800,
+      "y": 87400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-03-01",
+      "name": "云台区核心点01",
+      "districtId": "D-03",
+      "role": "core",
+      "x": 1040700,
+      "y": 165500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-03-02",
+      "name": "云台区核心点02",
+      "districtId": "D-03",
+      "role": "core",
+      "x": 1031200,
+      "y": 158100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-03-03",
+      "name": "云台区核心点03",
+      "districtId": "D-03",
+      "role": "core",
+      "x": 1042400,
+      "y": 153700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-03-04",
+      "name": "云台区卫星点04",
+      "districtId": "D-03",
+      "role": "satellite",
+      "x": 1015500,
+      "y": 140200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-03-05",
+      "name": "云台区卫星点05",
+      "districtId": "D-03",
+      "role": "satellite",
+      "x": 1054900,
+      "y": 178100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-04-01",
+      "name": "松原区核心点01",
+      "districtId": "D-04",
+      "role": "core",
+      "x": 1319900,
+      "y": 195100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-04-02",
+      "name": "松原区核心点02",
+      "districtId": "D-04",
+      "role": "core",
+      "x": 1321900,
+      "y": 183300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-04-03",
+      "name": "松原区核心点03",
+      "districtId": "D-04",
+      "role": "core",
+      "x": 1331100,
+      "y": 190900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-04-04",
+      "name": "松原区卫星点04",
+      "districtId": "D-04",
+      "role": "satellite",
+      "x": 1323600,
+      "y": 140300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-04-05",
+      "name": "松原区卫星点05",
+      "districtId": "D-04",
+      "role": "satellite",
+      "x": 1287900,
+      "y": 181400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-05-01",
+      "name": "晨光区核心点01",
+      "districtId": "D-05",
+      "role": "core",
+      "x": 1731200,
+      "y": 116200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-05-02",
+      "name": "晨光区核心点02",
+      "districtId": "D-05",
+      "role": "core",
+      "x": 1741100,
+      "y": 123100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-05-03",
+      "name": "晨光区核心点03",
+      "districtId": "D-05",
+      "role": "core",
+      "x": 1730300,
+      "y": 128200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-05-04",
+      "name": "晨光区卫星点04",
+      "districtId": "D-05",
+      "role": "satellite",
+      "x": 1765200,
+      "y": 112800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-05-05",
+      "name": "晨光区卫星点05",
+      "districtId": "D-05",
+      "role": "satellite",
+      "x": 1743800,
+      "y": 76900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-06-01",
+      "name": "西苑区核心点01",
+      "districtId": "D-06",
+      "role": "core",
+      "x": 183000,
+      "y": 613200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-06-02",
+      "name": "西苑区核心点02",
+      "districtId": "D-06",
+      "role": "core",
+      "x": 185400,
+      "y": 625000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-06-03",
+      "name": "西苑区核心点03",
+      "districtId": "D-06",
+      "role": "core",
+      "x": 174000,
+      "y": 621100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-06-04",
+      "name": "西苑区卫星点04",
+      "districtId": "D-06",
+      "role": "satellite",
+      "x": 148400,
+      "y": 627600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-06-05",
+      "name": "西苑区卫星点05",
+      "districtId": "D-06",
+      "role": "satellite",
+      "x": 234400,
+      "y": 604600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-07-01",
+      "name": "书院区核心点01",
+      "districtId": "D-07",
+      "role": "core",
+      "x": 572400,
+      "y": 582100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-07-02",
+      "name": "书院区核心点02",
+      "districtId": "D-07",
+      "role": "core",
+      "x": 581000,
+      "y": 590500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-07-03",
+      "name": "书院区核心点03",
+      "districtId": "D-07",
+      "role": "core",
+      "x": 569500,
+      "y": 593800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-07-04",
+      "name": "书院区卫星点04",
+      "districtId": "D-07",
+      "role": "satellite",
+      "x": 541600,
+      "y": 615400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-07-05",
+      "name": "书院区卫星点05",
+      "districtId": "D-07",
+      "role": "satellite",
+      "x": 543400,
+      "y": 576300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-08-01",
+      "name": "中央区核心点01",
+      "districtId": "D-08",
+      "role": "core",
+      "x": 1013500,
+      "y": 612400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-08-02",
+      "name": "中央区核心点02",
+      "districtId": "D-08",
+      "role": "core",
+      "x": 1001900,
+      "y": 609300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-08-03",
+      "name": "中央区核心点03",
+      "districtId": "D-08",
+      "role": "core",
+      "x": 1010400,
+      "y": 600800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-08-04",
+      "name": "中央区卫星点04",
+      "districtId": "D-08",
+      "role": "satellite",
+      "x": 973200,
+      "y": 607400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-08-05",
+      "name": "中央区卫星点05",
+      "districtId": "D-08",
+      "role": "satellite",
+      "x": 1005600,
+      "y": 631400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-09-01",
+      "name": "东庭区核心点01",
+      "districtId": "D-09",
+      "role": "core",
+      "x": 1312900,
+      "y": 556400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-09-02",
+      "name": "东庭区核心点02",
+      "districtId": "D-09",
+      "role": "core",
+      "x": 1322700,
+      "y": 549400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-09-03",
+      "name": "东庭区核心点03",
+      "districtId": "D-09",
+      "role": "core",
+      "x": 1323800,
+      "y": 561300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-09-04",
+      "name": "东庭区卫星点04",
+      "districtId": "D-09",
+      "role": "satellite",
+      "x": 1337600,
+      "y": 571100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-09-05",
+      "name": "东庭区卫星点05",
+      "districtId": "D-09",
+      "role": "satellite",
+      "x": 1364200,
+      "y": 523400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-10-01",
+      "name": "银杉区核心点01",
+      "districtId": "D-10",
+      "role": "core",
+      "x": 1890400,
+      "y": 561200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-10-02",
+      "name": "银杉区核心点02",
+      "districtId": "D-10",
+      "role": "core",
+      "x": 1885600,
+      "y": 550200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-10-03",
+      "name": "银杉区核心点03",
+      "districtId": "D-10",
+      "role": "core",
+      "x": 1897500,
+      "y": 551500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-10-04",
+      "name": "银杉区卫星点04",
+      "districtId": "D-10",
+      "role": "satellite",
+      "x": 1863800,
+      "y": 571500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-10-05",
+      "name": "银杉区卫星点05",
+      "districtId": "D-10",
+      "role": "satellite",
+      "x": 1922100,
+      "y": 533800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-11-01",
+      "name": "花港区核心点01",
+      "districtId": "D-11",
+      "role": "core",
+      "x": 278900,
+      "y": 943500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-11-02",
+      "name": "花港区核心点02",
+      "districtId": "D-11",
+      "role": "core",
+      "x": 284200,
+      "y": 954300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-11-03",
+      "name": "花港区核心点03",
+      "districtId": "D-11",
+      "role": "core",
+      "x": 272200,
+      "y": 953400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-11-04",
+      "name": "花港区卫星点04",
+      "districtId": "D-11",
+      "role": "satellite",
+      "x": 284600,
+      "y": 916600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-11-05",
+      "name": "花港区卫星点05",
+      "districtId": "D-11",
+      "role": "satellite",
+      "x": 330600,
+      "y": 954800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-12-01",
+      "name": "青石区核心点01",
+      "districtId": "D-12",
+      "role": "core",
+      "x": 525200,
+      "y": 1000900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-12-02",
+      "name": "青石区核心点02",
+      "districtId": "D-12",
+      "role": "core",
+      "x": 524100,
+      "y": 988900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-12-03",
+      "name": "青石区核心点03",
+      "districtId": "D-12",
+      "role": "core",
+      "x": 535000,
+      "y": 994000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-12-04",
+      "name": "青石区卫星点04",
+      "districtId": "D-12",
+      "role": "satellite",
+      "x": 516200,
+      "y": 964800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-12-05",
+      "name": "青石区卫星点05",
+      "districtId": "D-12",
+      "role": "satellite",
+      "x": 542800,
+      "y": 977800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-13-01",
+      "name": "环城区核心点01",
+      "districtId": "D-13",
+      "role": "core",
+      "x": 1044100,
+      "y": 1012800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-13-02",
+      "name": "环城区核心点02",
+      "districtId": "D-13",
+      "role": "core",
+      "x": 1037800,
+      "y": 1023000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-13-03",
+      "name": "环城区核心点03",
+      "districtId": "D-13",
+      "role": "core",
+      "x": 1032100,
+      "y": 1012500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-13-04",
+      "name": "环城区卫星点04",
+      "districtId": "D-13",
+      "role": "satellite",
+      "x": 1066500,
+      "y": 980400,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-13-05",
+      "name": "环城区卫星点05",
+      "districtId": "D-13",
+      "role": "satellite",
+      "x": 1018500,
+      "y": 1025000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-14-01",
+      "name": "晴川区核心点01",
+      "districtId": "D-14",
+      "role": "core",
+      "x": 1361400,
+      "y": 965700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-14-02",
+      "name": "晴川区核心点02",
+      "districtId": "D-14",
+      "role": "core",
+      "x": 1366900,
+      "y": 976300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-14-03",
+      "name": "晴川区核心点03",
+      "districtId": "D-14",
+      "role": "core",
+      "x": 1355000,
+      "y": 975800,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-14-04",
+      "name": "晴川区卫星点04",
+      "districtId": "D-14",
+      "role": "satellite",
+      "x": 1338900,
+      "y": 975300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-14-05",
+      "name": "晴川区卫星点05",
+      "districtId": "D-14",
+      "role": "satellite",
+      "x": 1385200,
+      "y": 985600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-15-01",
+      "name": "新城区核心点01",
+      "districtId": "D-15",
+      "role": "core",
+      "x": 1784100,
+      "y": 1077100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-15-02",
+      "name": "新城区核心点02",
+      "districtId": "D-15",
+      "role": "core",
+      "x": 1792200,
+      "y": 1086000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-15-03",
+      "name": "新城区核心点03",
+      "districtId": "D-15",
+      "role": "core",
+      "x": 1780500,
+      "y": 1088600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-15-04",
+      "name": "新城区卫星点04",
+      "districtId": "D-15",
+      "role": "satellite",
+      "x": 1780900,
+      "y": 1127300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-15-05",
+      "name": "新城区卫星点05",
+      "districtId": "D-15",
+      "role": "satellite",
+      "x": 1829800,
+      "y": 1085200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-16-01",
+      "name": "南屏区核心点01",
+      "districtId": "D-16",
+      "role": "core",
+      "x": 149600,
+      "y": 1473500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-16-02",
+      "name": "南屏区核心点02",
+      "districtId": "D-16",
+      "role": "core",
+      "x": 147400,
+      "y": 1461700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-16-03",
+      "name": "南屏区核心点03",
+      "districtId": "D-16",
+      "role": "core",
+      "x": 158700,
+      "y": 1465700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-16-04",
+      "name": "南屏区卫星点04",
+      "districtId": "D-16",
+      "role": "satellite",
+      "x": 142900,
+      "y": 1425500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-16-05",
+      "name": "南屏区卫星点05",
+      "districtId": "D-16",
+      "role": "satellite",
+      "x": 134400,
+      "y": 1521900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-17-01",
+      "name": "竹影区核心点01",
+      "districtId": "D-17",
+      "role": "core",
+      "x": 599900,
+      "y": 1355500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-17-02",
+      "name": "竹影区核心点02",
+      "districtId": "D-17",
+      "role": "core",
+      "x": 589900,
+      "y": 1362100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-17-03",
+      "name": "竹影区核心点03",
+      "districtId": "D-17",
+      "role": "core",
+      "x": 589200,
+      "y": 1350100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-17-04",
+      "name": "竹影区卫星点04",
+      "districtId": "D-17",
+      "role": "satellite",
+      "x": 606000,
+      "y": 1336100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-17-05",
+      "name": "竹影区卫星点05",
+      "districtId": "D-17",
+      "role": "satellite",
+      "x": 559000,
+      "y": 1307900,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-18-01",
+      "name": "艺廊区核心点01",
+      "districtId": "D-18",
+      "role": "core",
+      "x": 921900,
+      "y": 1454700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-18-02",
+      "name": "艺廊区核心点02",
+      "districtId": "D-18",
+      "role": "core",
+      "x": 910900,
+      "y": 1459600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-18-03",
+      "name": "艺廊区核心点03",
+      "districtId": "D-18",
+      "role": "core",
+      "x": 912200,
+      "y": 1447700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-18-04",
+      "name": "艺廊区卫星点04",
+      "districtId": "D-18",
+      "role": "satellite",
+      "x": 932200,
+      "y": 1397300,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-18-05",
+      "name": "艺廊区卫星点05",
+      "districtId": "D-18",
+      "role": "satellite",
+      "x": 956700,
+      "y": 1490600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-19-01",
+      "name": "长风区核心点01",
+      "districtId": "D-19",
+      "role": "core",
+      "x": 1302500,
+      "y": 1472600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-19-02",
+      "name": "长风区核心点02",
+      "districtId": "D-19",
+      "role": "core",
+      "x": 1301400,
+      "y": 1460600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-19-03",
+      "name": "长风区核心点03",
+      "districtId": "D-19",
+      "role": "core",
+      "x": 1312300,
+      "y": 1465700,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-19-04",
+      "name": "长风区卫星点04",
+      "districtId": "D-19",
+      "role": "satellite",
+      "x": 1348200,
+      "y": 1498500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-19-05",
+      "name": "长风区卫星点05",
+      "districtId": "D-19",
+      "role": "satellite",
+      "x": 1265300,
+      "y": 1446000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-20-01",
+      "name": "远景区核心点01",
+      "districtId": "D-20",
+      "role": "core",
+      "x": 1786500,
+      "y": 1374600,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-20-02",
+      "name": "远景区核心点02",
+      "districtId": "D-20",
+      "role": "core",
+      "x": 1775000,
+      "y": 1371200,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-20-03",
+      "name": "远景区核心点03",
+      "districtId": "D-20",
+      "role": "core",
+      "x": 1783600,
+      "y": 1363000,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-20-04",
+      "name": "远景区卫星点04",
+      "districtId": "D-20",
+      "role": "satellite",
+      "x": 1826400,
+      "y": 1357500,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "PO-20-05",
+      "name": "远景区卫星点05",
+      "districtId": "D-20",
+      "role": "satellite",
+      "x": 1797300,
+      "y": 1396100,
+      "faction": null,
+      "version": 0,
+      "resonators": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "mods": [
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  ],
+  "water": [
+    {
+      "points": [
+        {
+          "x": 1037550,
+          "y": -20000
+        },
+        {
+          "x": 1040650,
+          "y": -15000
+        },
+        {
+          "x": 1043750,
+          "y": -10000
+        },
+        {
+          "x": 1046875,
+          "y": -5000
+        },
+        {
+          "x": 1050000,
+          "y": 0
+        },
+        {
+          "x": 1053125,
+          "y": 5000
+        },
+        {
+          "x": 1056250,
+          "y": 10000
+        },
+        {
+          "x": 1059350,
+          "y": 15000
+        },
+        {
+          "x": 1062450,
+          "y": 20000
+        },
+        {
+          "x": 1065525,
+          "y": 25000
+        },
+        {
+          "x": 1068575,
+          "y": 30000
+        },
+        {
+          "x": 1071588,
+          "y": 35000
+        },
+        {
+          "x": 1074562,
+          "y": 40000
+        },
+        {
+          "x": 1077512,
+          "y": 45000
+        },
+        {
+          "x": 1080400,
+          "y": 50000
+        },
+        {
+          "x": 1083250,
+          "y": 55000
+        },
+        {
+          "x": 1086038,
+          "y": 60000
+        },
+        {
+          "x": 1088762,
+          "y": 65000
+        },
+        {
+          "x": 1091425,
+          "y": 70000
+        },
+        {
+          "x": 1094025,
+          "y": 75000
+        },
+        {
+          "x": 1096550,
+          "y": 80000
+        },
+        {
+          "x": 1099000,
+          "y": 85000
+        },
+        {
+          "x": 1101362,
+          "y": 90000
+        },
+        {
+          "x": 1103650,
+          "y": 95000
+        },
+        {
+          "x": 1105862,
+          "y": 100000
+        },
+        {
+          "x": 1107975,
+          "y": 105000
+        },
+        {
+          "x": 1109988,
+          "y": 110000
+        },
+        {
+          "x": 1111912,
+          "y": 115000
+        },
+        {
+          "x": 1113750,
+          "y": 120000
+        },
+        {
+          "x": 1115475,
+          "y": 125000
+        },
+        {
+          "x": 1117100,
+          "y": 130000
+        },
+        {
+          "x": 1118625,
+          "y": 135000
+        },
+        {
+          "x": 1120050,
+          "y": 140000
+        },
+        {
+          "x": 1121375,
+          "y": 145000
+        },
+        {
+          "x": 1122575,
+          "y": 150000
+        },
+        {
+          "x": 1123688,
+          "y": 155000
+        },
+        {
+          "x": 1124675,
+          "y": 160000
+        },
+        {
+          "x": 1125562,
+          "y": 165000
+        },
+        {
+          "x": 1126338,
+          "y": 170000
+        },
+        {
+          "x": 1127012,
+          "y": 175000
+        },
+        {
+          "x": 1127575,
+          "y": 180000
+        },
+        {
+          "x": 1128038,
+          "y": 185000
+        },
+        {
+          "x": 1128388,
+          "y": 190000
+        },
+        {
+          "x": 1128638,
+          "y": 195000
+        },
+        {
+          "x": 1128775,
+          "y": 200000
+        },
+        {
+          "x": 1128825,
+          "y": 205000
+        },
+        {
+          "x": 1128762,
+          "y": 210000
+        },
+        {
+          "x": 1128612,
+          "y": 215000
+        },
+        {
+          "x": 1128362,
+          "y": 220000
+        },
+        {
+          "x": 1128012,
+          "y": 225000
+        },
+        {
+          "x": 1127575,
+          "y": 230000
+        },
+        {
+          "x": 1127062,
+          "y": 235000
+        },
+        {
+          "x": 1126450,
+          "y": 240000
+        },
+        {
+          "x": 1125762,
+          "y": 245000
+        },
+        {
+          "x": 1125000,
+          "y": 250000
+        },
+        {
+          "x": 1124162,
+          "y": 255000
+        },
+        {
+          "x": 1123250,
+          "y": 260000
+        },
+        {
+          "x": 1122275,
+          "y": 265000
+        },
+        {
+          "x": 1121225,
+          "y": 270000
+        },
+        {
+          "x": 1120125,
+          "y": 275000
+        },
+        {
+          "x": 1118962,
+          "y": 280000
+        },
+        {
+          "x": 1117750,
+          "y": 285000
+        },
+        {
+          "x": 1116500,
+          "y": 290000
+        },
+        {
+          "x": 1115200,
+          "y": 295000
+        },
+        {
+          "x": 1113850,
+          "y": 300000
+        },
+        {
+          "x": 1112475,
+          "y": 305000
+        },
+        {
+          "x": 1111075,
+          "y": 310000
+        },
+        {
+          "x": 1109638,
+          "y": 315000
+        },
+        {
+          "x": 1108188,
+          "y": 320000
+        },
+        {
+          "x": 1106712,
+          "y": 325000
+        },
+        {
+          "x": 1105225,
+          "y": 330000
+        },
+        {
+          "x": 1103725,
+          "y": 335000
+        },
+        {
+          "x": 1102212,
+          "y": 340000
+        },
+        {
+          "x": 1100712,
+          "y": 345000
+        },
+        {
+          "x": 1099212,
+          "y": 350000
+        },
+        {
+          "x": 1097712,
+          "y": 355000
+        },
+        {
+          "x": 1096225,
+          "y": 360000
+        },
+        {
+          "x": 1094750,
+          "y": 365000
+        },
+        {
+          "x": 1093300,
+          "y": 370000
+        },
+        {
+          "x": 1091862,
+          "y": 375000
+        },
+        {
+          "x": 1090450,
+          "y": 380000
+        },
+        {
+          "x": 1089062,
+          "y": 385000
+        },
+        {
+          "x": 1087712,
+          "y": 390000
+        },
+        {
+          "x": 1086388,
+          "y": 395000
+        },
+        {
+          "x": 1085112,
+          "y": 400000
+        },
+        {
+          "x": 1083862,
+          "y": 405000
+        },
+        {
+          "x": 1082650,
+          "y": 410000
+        },
+        {
+          "x": 1081488,
+          "y": 415000
+        },
+        {
+          "x": 1080362,
+          "y": 420000
+        },
+        {
+          "x": 1079300,
+          "y": 425000
+        },
+        {
+          "x": 1078262,
+          "y": 430000
+        },
+        {
+          "x": 1077288,
+          "y": 435000
+        },
+        {
+          "x": 1076362,
+          "y": 440000
+        },
+        {
+          "x": 1075488,
+          "y": 445000
+        },
+        {
+          "x": 1074662,
+          "y": 450000
+        },
+        {
+          "x": 1073888,
+          "y": 455000
+        },
+        {
+          "x": 1073162,
+          "y": 460000
+        },
+        {
+          "x": 1072500,
+          "y": 465000
+        },
+        {
+          "x": 1071888,
+          "y": 470000
+        },
+        {
+          "x": 1071312,
+          "y": 475000
+        },
+        {
+          "x": 1070800,
+          "y": 480000
+        },
+        {
+          "x": 1070338,
+          "y": 485000
+        },
+        {
+          "x": 1069925,
+          "y": 490000
+        },
+        {
+          "x": 1069562,
+          "y": 495000
+        },
+        {
+          "x": 1069250,
+          "y": 500000
+        },
+        {
+          "x": 1068975,
+          "y": 505000
+        },
+        {
+          "x": 1068750,
+          "y": 510000
+        },
+        {
+          "x": 1068562,
+          "y": 515000
+        },
+        {
+          "x": 1068412,
+          "y": 520000
+        },
+        {
+          "x": 1068300,
+          "y": 525000
+        },
+        {
+          "x": 1068225,
+          "y": 530000
+        },
+        {
+          "x": 1068188,
+          "y": 535000
+        },
+        {
+          "x": 1068175,
+          "y": 540000
+        },
+        {
+          "x": 1068188,
+          "y": 545000
+        },
+        {
+          "x": 1068225,
+          "y": 550000
+        },
+        {
+          "x": 1068288,
+          "y": 555000
+        },
+        {
+          "x": 1068362,
+          "y": 560000
+        },
+        {
+          "x": 1068450,
+          "y": 565000
+        },
+        {
+          "x": 1068550,
+          "y": 570000
+        },
+        {
+          "x": 1068662,
+          "y": 575000
+        },
+        {
+          "x": 1068788,
+          "y": 580000
+        },
+        {
+          "x": 1068900,
+          "y": 585000
+        },
+        {
+          "x": 1069012,
+          "y": 590000
+        },
+        {
+          "x": 1069125,
+          "y": 595000
+        },
+        {
+          "x": 1069225,
+          "y": 600000
+        },
+        {
+          "x": 1069300,
+          "y": 605000
+        },
+        {
+          "x": 1069375,
+          "y": 610000
+        },
+        {
+          "x": 1069425,
+          "y": 615000
+        },
+        {
+          "x": 1069450,
+          "y": 620000
+        },
+        {
+          "x": 1069450,
+          "y": 625000
+        },
+        {
+          "x": 1069412,
+          "y": 630000
+        },
+        {
+          "x": 1069350,
+          "y": 635000
+        },
+        {
+          "x": 1069250,
+          "y": 640000
+        },
+        {
+          "x": 1069100,
+          "y": 645000
+        },
+        {
+          "x": 1068925,
+          "y": 650000
+        },
+        {
+          "x": 1068688,
+          "y": 655000
+        },
+        {
+          "x": 1068412,
+          "y": 660000
+        },
+        {
+          "x": 1068075,
+          "y": 665000
+        },
+        {
+          "x": 1067700,
+          "y": 670000
+        },
+        {
+          "x": 1067250,
+          "y": 675000
+        },
+        {
+          "x": 1066762,
+          "y": 680000
+        },
+        {
+          "x": 1066200,
+          "y": 685000
+        },
+        {
+          "x": 1065575,
+          "y": 690000
+        },
+        {
+          "x": 1064900,
+          "y": 695000
+        },
+        {
+          "x": 1064150,
+          "y": 700000
+        },
+        {
+          "x": 1063325,
+          "y": 705000
+        },
+        {
+          "x": 1062450,
+          "y": 710000
+        },
+        {
+          "x": 1061500,
+          "y": 715000
+        },
+        {
+          "x": 1060475,
+          "y": 720000
+        },
+        {
+          "x": 1059388,
+          "y": 725000
+        },
+        {
+          "x": 1058225,
+          "y": 730000
+        },
+        {
+          "x": 1056988,
+          "y": 735000
+        },
+        {
+          "x": 1055700,
+          "y": 740000
+        },
+        {
+          "x": 1054325,
+          "y": 745000
+        },
+        {
+          "x": 1052888,
+          "y": 750000
+        },
+        {
+          "x": 1051388,
+          "y": 755000
+        },
+        {
+          "x": 1049812,
+          "y": 760000
+        },
+        {
+          "x": 1048175,
+          "y": 765000
+        },
+        {
+          "x": 1046475,
+          "y": 770000
+        },
+        {
+          "x": 1044712,
+          "y": 775000
+        },
+        {
+          "x": 1042887,
+          "y": 780000
+        },
+        {
+          "x": 1041012,
+          "y": 785000
+        },
+        {
+          "x": 1039075,
+          "y": 790000
+        },
+        {
+          "x": 1037088,
+          "y": 795000
+        },
+        {
+          "x": 1035050,
+          "y": 800000
+        },
+        {
+          "x": 1032962,
+          "y": 805000
+        },
+        {
+          "x": 1030825,
+          "y": 810000
+        },
+        {
+          "x": 1028662,
+          "y": 815000
+        },
+        {
+          "x": 1026450,
+          "y": 820000
+        },
+        {
+          "x": 1024212,
+          "y": 825000
+        },
+        {
+          "x": 1021938,
+          "y": 830000
+        },
+        {
+          "x": 1019638,
+          "y": 835000
+        },
+        {
+          "x": 1017312,
+          "y": 840000
+        },
+        {
+          "x": 1014975,
+          "y": 845000
+        },
+        {
+          "x": 1012625,
+          "y": 850000
+        },
+        {
+          "x": 1010262,
+          "y": 855000
+        },
+        {
+          "x": 1007900,
+          "y": 860000
+        },
+        {
+          "x": 1005537,
+          "y": 865000
+        },
+        {
+          "x": 1003175,
+          "y": 870000
+        },
+        {
+          "x": 1000825,
+          "y": 875000
+        },
+        {
+          "x": 998475,
+          "y": 880000
+        },
+        {
+          "x": 996162,
+          "y": 885000
+        },
+        {
+          "x": 993862,
+          "y": 890000
+        },
+        {
+          "x": 991600,
+          "y": 895000
+        },
+        {
+          "x": 989362,
+          "y": 900000
+        },
+        {
+          "x": 987162,
+          "y": 905000
+        },
+        {
+          "x": 985012,
+          "y": 910000
+        },
+        {
+          "x": 982900,
+          "y": 915000
+        },
+        {
+          "x": 980838,
+          "y": 920000
+        },
+        {
+          "x": 978838,
+          "y": 925000
+        },
+        {
+          "x": 976900,
+          "y": 930000
+        },
+        {
+          "x": 975025,
+          "y": 935000
+        },
+        {
+          "x": 973225,
+          "y": 940000
+        },
+        {
+          "x": 971488,
+          "y": 945000
+        },
+        {
+          "x": 969838,
+          "y": 950000
+        },
+        {
+          "x": 968262,
+          "y": 955000
+        },
+        {
+          "x": 966775,
+          "y": 960000
+        },
+        {
+          "x": 965375,
+          "y": 965000
+        },
+        {
+          "x": 964062,
+          "y": 970000
+        },
+        {
+          "x": 962850,
+          "y": 975000
+        },
+        {
+          "x": 961738,
+          "y": 980000
+        },
+        {
+          "x": 960725,
+          "y": 985000
+        },
+        {
+          "x": 959812,
+          "y": 990000
+        },
+        {
+          "x": 959012,
+          "y": 995000
+        },
+        {
+          "x": 958325,
+          "y": 1000000
+        },
+        {
+          "x": 957738,
+          "y": 1005000
+        },
+        {
+          "x": 957275,
+          "y": 1010000
+        },
+        {
+          "x": 956912,
+          "y": 1015000
+        },
+        {
+          "x": 956675,
+          "y": 1020000
+        },
+        {
+          "x": 956550,
+          "y": 1025000
+        },
+        {
+          "x": 956550,
+          "y": 1030000
+        },
+        {
+          "x": 956662,
+          "y": 1035000
+        },
+        {
+          "x": 956900,
+          "y": 1040000
+        },
+        {
+          "x": 957250,
+          "y": 1045000
+        },
+        {
+          "x": 957712,
+          "y": 1050000
+        },
+        {
+          "x": 958312,
+          "y": 1055000
+        },
+        {
+          "x": 959012,
+          "y": 1060000
+        },
+        {
+          "x": 959838,
+          "y": 1065000
+        },
+        {
+          "x": 960775,
+          "y": 1070000
+        },
+        {
+          "x": 961825,
+          "y": 1075000
+        },
+        {
+          "x": 962988,
+          "y": 1080000
+        },
+        {
+          "x": 964262,
+          "y": 1085000
+        },
+        {
+          "x": 965650,
+          "y": 1090000
+        },
+        {
+          "x": 967138,
+          "y": 1095000
+        },
+        {
+          "x": 968738,
+          "y": 1100000
+        },
+        {
+          "x": 970438,
+          "y": 1105000
+        },
+        {
+          "x": 972225,
+          "y": 1110000
+        },
+        {
+          "x": 974125,
+          "y": 1115000
+        },
+        {
+          "x": 976100,
+          "y": 1120000
+        },
+        {
+          "x": 978175,
+          "y": 1125000
+        },
+        {
+          "x": 980325,
+          "y": 1130000
+        },
+        {
+          "x": 982562,
+          "y": 1135000
+        },
+        {
+          "x": 984875,
+          "y": 1140000
+        },
+        {
+          "x": 987250,
+          "y": 1145000
+        },
+        {
+          "x": 989712,
+          "y": 1150000
+        },
+        {
+          "x": 992225,
+          "y": 1155000
+        },
+        {
+          "x": 994800,
+          "y": 1160000
+        },
+        {
+          "x": 997425,
+          "y": 1165000
+        },
+        {
+          "x": 1000100,
+          "y": 1170000
+        },
+        {
+          "x": 1002825,
+          "y": 1175000
+        },
+        {
+          "x": 1005588,
+          "y": 1180000
+        },
+        {
+          "x": 1008388,
+          "y": 1185000
+        },
+        {
+          "x": 1011212,
+          "y": 1190000
+        },
+        {
+          "x": 1014062,
+          "y": 1195000
+        },
+        {
+          "x": 1016938,
+          "y": 1200000
+        },
+        {
+          "x": 1019825,
+          "y": 1205000
+        },
+        {
+          "x": 1022725,
+          "y": 1210000
+        },
+        {
+          "x": 1025625,
+          "y": 1215000
+        },
+        {
+          "x": 1028512,
+          "y": 1220000
+        },
+        {
+          "x": 1031412,
+          "y": 1225000
+        },
+        {
+          "x": 1034287,
+          "y": 1230000
+        },
+        {
+          "x": 1037162,
+          "y": 1235000
+        },
+        {
+          "x": 1040000,
+          "y": 1240000
+        },
+        {
+          "x": 1042825,
+          "y": 1245000
+        },
+        {
+          "x": 1045612,
+          "y": 1250000
+        },
+        {
+          "x": 1048375,
+          "y": 1255000
+        },
+        {
+          "x": 1051088,
+          "y": 1260000
+        },
+        {
+          "x": 1053762,
+          "y": 1265000
+        },
+        {
+          "x": 1056388,
+          "y": 1270000
+        },
+        {
+          "x": 1058975,
+          "y": 1275000
+        },
+        {
+          "x": 1061488,
+          "y": 1280000
+        },
+        {
+          "x": 1063950,
+          "y": 1285000
+        },
+        {
+          "x": 1066350,
+          "y": 1290000
+        },
+        {
+          "x": 1068688,
+          "y": 1295000
+        },
+        {
+          "x": 1070962,
+          "y": 1300000
+        },
+        {
+          "x": 1073150,
+          "y": 1305000
+        },
+        {
+          "x": 1075275,
+          "y": 1310000
+        },
+        {
+          "x": 1077325,
+          "y": 1315000
+        },
+        {
+          "x": 1079288,
+          "y": 1320000
+        },
+        {
+          "x": 1081175,
+          "y": 1325000
+        },
+        {
+          "x": 1082975,
+          "y": 1330000
+        },
+        {
+          "x": 1084700,
+          "y": 1335000
+        },
+        {
+          "x": 1086325,
+          "y": 1340000
+        },
+        {
+          "x": 1087875,
+          "y": 1345000
+        },
+        {
+          "x": 1089338,
+          "y": 1350000
+        },
+        {
+          "x": 1090712,
+          "y": 1355000
+        },
+        {
+          "x": 1091988,
+          "y": 1360000
+        },
+        {
+          "x": 1093188,
+          "y": 1365000
+        },
+        {
+          "x": 1094288,
+          "y": 1370000
+        },
+        {
+          "x": 1095300,
+          "y": 1375000
+        },
+        {
+          "x": 1096238,
+          "y": 1380000
+        },
+        {
+          "x": 1097075,
+          "y": 1385000
+        },
+        {
+          "x": 1097825,
+          "y": 1390000
+        },
+        {
+          "x": 1098500,
+          "y": 1395000
+        },
+        {
+          "x": 1099088,
+          "y": 1400000
+        },
+        {
+          "x": 1099588,
+          "y": 1405000
+        },
+        {
+          "x": 1100012,
+          "y": 1410000
+        },
+        {
+          "x": 1100350,
+          "y": 1415000
+        },
+        {
+          "x": 1100625,
+          "y": 1420000
+        },
+        {
+          "x": 1100812,
+          "y": 1425000
+        },
+        {
+          "x": 1100938,
+          "y": 1430000
+        },
+        {
+          "x": 1100988,
+          "y": 1435000
+        },
+        {
+          "x": 1100975,
+          "y": 1440000
+        },
+        {
+          "x": 1100900,
+          "y": 1445000
+        },
+        {
+          "x": 1100762,
+          "y": 1450000
+        },
+        {
+          "x": 1100562,
+          "y": 1455000
+        },
+        {
+          "x": 1100312,
+          "y": 1460000
+        },
+        {
+          "x": 1100012,
+          "y": 1465000
+        },
+        {
+          "x": 1099662,
+          "y": 1470000
+        },
+        {
+          "x": 1099275,
+          "y": 1475000
+        },
+        {
+          "x": 1098850,
+          "y": 1480000
+        },
+        {
+          "x": 1098388,
+          "y": 1485000
+        },
+        {
+          "x": 1097888,
+          "y": 1490000
+        },
+        {
+          "x": 1097350,
+          "y": 1495000
+        },
+        {
+          "x": 1096800,
+          "y": 1500000
+        },
+        {
+          "x": 1096225,
+          "y": 1505000
+        },
+        {
+          "x": 1095638,
+          "y": 1510000
+        },
+        {
+          "x": 1095038,
+          "y": 1515000
+        },
+        {
+          "x": 1094425,
+          "y": 1520000
+        },
+        {
+          "x": 1093800,
+          "y": 1525000
+        },
+        {
+          "x": 1093175,
+          "y": 1530000
+        },
+        {
+          "x": 1092550,
+          "y": 1535000
+        },
+        {
+          "x": 1091938,
+          "y": 1540000
+        },
+        {
+          "x": 1091325,
+          "y": 1545000
+        },
+        {
+          "x": 1090725,
+          "y": 1550000
+        },
+        {
+          "x": 1090150,
+          "y": 1555000
+        },
+        {
+          "x": 1089588,
+          "y": 1560000
+        },
+        {
+          "x": 1089038,
+          "y": 1565000
+        },
+        {
+          "x": 1088512,
+          "y": 1570000
+        },
+        {
+          "x": 1088025,
+          "y": 1575000
+        },
+        {
+          "x": 1087550,
+          "y": 1580000
+        },
+        {
+          "x": 1087125,
+          "y": 1585000
+        },
+        {
+          "x": 1086725,
+          "y": 1590000
+        },
+        {
+          "x": 1086350,
+          "y": 1595000
+        },
+        {
+          "x": 1086025,
+          "y": 1600000
+        },
+        {
+          "x": 1085738,
+          "y": 1605000
+        },
+        {
+          "x": 1085500,
+          "y": 1610000
+        },
+        {
+          "x": 1085288,
+          "y": 1615000
+        },
+        {
+          "x": 1085125,
+          "y": 1620000
+        }
+      ],
+      "halfWidth": 15000
+    }
+  ],
+  "rails": [
+    {
+      "points": [
+        {
+          "x": 0,
+          "y": 1130000
+        },
+        {
+          "x": 470000,
+          "y": 1140000
+        },
+        {
+          "x": 790000,
+          "y": 1100000
+        },
+        {
+          "x": 1210000,
+          "y": 1110000
+        },
+        {
+          "x": 1570000,
+          "y": 1040000
+        },
+        {
+          "x": 2000000,
+          "y": 1030000
+        }
+      ],
+      "halfWidth": 0
+    }
+  ],
+  "centers": [
+    {
+      "districtId": "D-01",
+      "x": 250800,
+      "y": 161900
+    },
+    {
+      "districtId": "D-02",
+      "x": 675100,
+      "y": 132400
+    },
+    {
+      "districtId": "D-03",
+      "x": 1038100,
+      "y": 159100
+    },
+    {
+      "districtId": "D-04",
+      "x": 1324300,
+      "y": 189800
+    },
+    {
+      "districtId": "D-05",
+      "x": 1734200,
+      "y": 122500
+    },
+    {
+      "districtId": "D-06",
+      "x": 180800,
+      "y": 619800
+    },
+    {
+      "districtId": "D-07",
+      "x": 574300,
+      "y": 588800
+    },
+    {
+      "districtId": "D-08",
+      "x": 1008600,
+      "y": 607500
+    },
+    {
+      "districtId": "D-09",
+      "x": 1319800,
+      "y": 555700
+    },
+    {
+      "districtId": "D-10",
+      "x": 1891200,
+      "y": 554300
+    },
+    {
+      "districtId": "D-11",
+      "x": 278400,
+      "y": 950400
+    },
+    {
+      "districtId": "D-12",
+      "x": 528100,
+      "y": 994600
+    },
+    {
+      "districtId": "D-13",
+      "x": 1038000,
+      "y": 1016100
+    },
+    {
+      "districtId": "D-14",
+      "x": 1361100,
+      "y": 972600
+    },
+    {
+      "districtId": "D-15",
+      "x": 1785600,
+      "y": 1083900
+    },
+    {
+      "districtId": "D-16",
+      "x": 151900,
+      "y": 1467000
+    },
+    {
+      "districtId": "D-17",
+      "x": 593000,
+      "y": 1355900
+    },
+    {
+      "districtId": "D-18",
+      "x": 915000,
+      "y": 1454000
+    },
+    {
+      "districtId": "D-19",
+      "x": 1305400,
+      "y": 1466300
+    },
+    {
+      "districtId": "D-20",
+      "x": 1781700,
+      "y": 1369600
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+# 依赖、构建产物与工具缓存
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.cache/
+.codegraph/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# 私密配置；保留可公开的配置示例
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# 文档、设计历史和评审证据；保留项目说明与协作规则
+/docs/
+/archive/
+/review-evidence/
+*.md
+!README.md
+!AGENTS.md
+*.doc
+*.docx
+*.pdf
+*.ppt
+*.pptx
+/maps/map-initial.json
+/maps/虚拟城市地图.svg
+/maps/虚拟城市地图.png
+
+# 测试报告、临时文件与日志
+test-results/
+playwright-report/
+playwright/.cache/
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+
+# 压缩包、安装包与数据库备份
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.dmg
+*.pkg
+*.dump
+*.bak
+/backups/
+
+# macOS 元数据
+.DS_Store
+._*
+
+# 服务器持久化数据与私有证书
+/data/
+/tls/

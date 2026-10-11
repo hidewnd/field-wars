@@ -1,0 +1,25 @@
+# 与 compose.yaml 合并；服务器独立使用 field-wars 项目和宿主目录持久化。
+name: field-wars
+
+services:
+  app:
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://fieldwars.hidewnd.cn}
+      LAN_ORIGIN: ${LAN_ORIGIN:-http://192.168.3.61:8080}
+      COOKIE_SECURE: "true"
+  migrate:
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://fieldwars.hidewnd.cn}
+      LAN_ORIGIN: ${LAN_ORIGIN:-http://192.168.3.61:8080}
+      COOKIE_SECURE: "true"
+  web:
+    ports: !override
+      - "${WEB_BIND_IP:-0.0.0.0}:${WEB_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${FIELD_WARS_DATA_DIR:-/home/hidewnd/docker/field-wars/data/postgres}

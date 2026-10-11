@@ -1,0 +1,308 @@
+import { expect, test, type Page } from '@playwright/test';
+import map from '../maps/beta-v1.json' with { type: 'json' };
+import type { Portal, Snapshot } from '../shared/types';
+
+test.use({ channel: process.env.PLAYWRIGHT_CHANNEL ?? undefined, viewport: { width: 1440, height: 960 } });
+const source = map.portals.filter(p => p.role === 'core').slice(0, 2);
+const [origin, target] = source;
+
+function fixture(): Snapshot {
+  const now = Date.now();
+  const portals = structuredClone(map.portals) as Portal[];
+  for (const portal of portals.filter(p => source.some(s => s.id === p.id))) {
+    portal.faction = 'blue';
+    portal.resonators = Array.from({ length: 8 }, (_, slot) => ({
+      level: 1, energy: slot === 2 ? 500 : 1000, owner: 'demo', generation: `g-${slot}`,
+      x: portal.x + Math.round(Math.cos(slot * Math.PI / 4) * 1600),
+      y: portal.y + Math.round(Math.sin(slot * Math.PI / 4) * 1600), nextDecayAt: now + 86400000,
+    }));
+  }
+  return {
+    map: map as Snapshot['map'], rulesetVersion: 'beta-v1', mapVersion: 'beta-v1', serverTime: now, csrfToken: 'test', commandEpoch: 'test',
+    world: { seq: '1', logicalAt: now, season: { id: 1, startAt: now, endAt: now + 604800000 }, nextCheckpoint: now + 300000,
+      portals: Object.fromEntries(portals.map(p => [p.id, p])), links: [], fields: [], scores: { red: 0, green: 0, blue: 0 }, maintenance: false, announcement: '' },
+    player: { id: 'demo', name: '探索者', faction: 'blue', ap: 240000, xm: 10000, x: origin.x, y: origin.y,
+      inventory: [{ type: 'resonator', level: 1, quantity: 24 }, { type: 'pulse', level: 1, quantity: 8 }, { type: 'pulse', level: 8, quantity: 3 }, { type: 'key', level: 1, portalId: target.id, quantity: 1 }],
+      movement: null, cooldowns: {}, hacks: {}, version: 1, energyAt: now, energyRemainder: 0, createdAt: now,
+      tutorial: { first_field_at: now }, rechargeRemainder: 0, restrictedUntil: 0 },
+  };
+}
+async function mount(page: Page, state = fixture()) {
+  await page.routeWebSocket('**/api/events', () => {});
+  await page.route('**/api/session', route => route.fulfill({ json: { player: state.player, csrfToken: 'test', commandEpoch: 'test' } }));
+  await page.route('**/api/world/snapshot', route => route.fulfill({ json: state }));
+  await page.route('**/api/po-applications/mine', route => route.fulfill({ json: { applications: [] } }));
+  await page.route('**/api/social', route => route.fulfill({ json: { markers: [], alerts: [] } }));
+  await page.goto(process.env.BASE_URL ?? 'http://127.0.0.1:5174/');
+  await expect(page.getByRole('heading', { name: origin.name })).toBeVisible();
+}
+async function center(page: Page, id = origin.id) {
+  return page.locator(`[data-portal-id="${id}"]`).evaluate(node => {
+    const point = new DOMPoint(0, 0).matrixTransform((node as SVGGraphicsElement).getScreenCTM()!);
+    return { x: point.x, y: point.y };
+  });
+}
+
+test('PO边缘、脚节点和轻抖点击仅选择；拖动和取消不移动', async ({ page }) => {
+  const dialogs: string[] = [], moves: string[] = [];
+  page.on('dialog', async dialog => { dialogs.push(dialog.message()); await dialog.dismiss(); });
+  await page.route('**/api/moves', route => { moves.push(route.request().url()); return route.abort(); });
+  await mount(page);
+  await page.getByRole('button', { name: '关闭详情' }).click();
+  const p = await center(page);
+  await page.mouse.click(p.x + 20, p.y - 3);
+  await expect(page.getByRole('heading', { name: origin.name })).toBeVisible();
+  await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.mouse.move(p.x + 5, p.y + 2); await page.mouse.up();
+  await expect(page.getByRole('heading', { name: origin.name })).toBeVisible();
+  await page.getByRole('button', { name: '关闭详情' }).click();
+  const foot = page.locator(`[data-portal-id="${origin.id}"] [data-resonator-slot="0"] circle`).first();
+  await foot.click();
+  await expect(page.getByRole('heading', { name: origin.name })).toBeVisible();
+  await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.mouse.move(p.x + 70, p.y + 40, { steps: 5 }); await page.mouse.up();
+  await page.locator('svg.world-map').dispatchEvent('pointercancel', { pointerId: 1 });
+  expect(dialogs).toEqual([]); expect(moves).toEqual([]);
+});
+
+test('右键菜单区分空白和PO，基础操作保留且点击外部或Escape关闭', async ({ page }) => {
+  await mount(page);
+  const p = await center(page);
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  const menu = page.getByRole('menu', { name: '地图快捷操作' });
+  await expect(menu.getByRole('menuitem', { name: '入侵 Hack' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: '当前位置攻击' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: '申请新 PO' })).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(menu).toHaveCount(0);
+  const box = await page.locator('svg.world-map').boundingBox();
+  await page.mouse.click(box!.x + box!.width - 8, box!.y + 65, { button: 'right' });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: '入侵 Hack' })).toHaveCount(0);
+  const menuBox = await menu.boundingBox();
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(1440);
+  await menu.getByRole('menuitem', { name: '申请新 PO' }).click();
+  await expect(page.getByRole('heading', { name: '申请新 PO' })).toBeVisible();
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.getByRole('heading', { name: origin.name }).click();
+  await expect(menu).toHaveCount(0);
+});
+
+test('右键攻击从玩家当前位置提交且PO入侵使用菜单目标', async ({ page }) => {
+  let attack: Record<string, unknown> | undefined, hackPath = '';
+  await mount(page);
+  await page.route('**/api/attacks', route => { attack = route.request().postDataJSON().payload; return route.fulfill({ json: { result: { type: 'attack', hits: 1 }, committedSeq: '2' } }); });
+  const p = await center(page, target.id);
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.getByRole('menuitem', { name: '当前位置攻击' }).click();
+  await expect.poll(() => attack).toEqual({ level: 8 });
+  await expect(page.locator('.toast')).toHaveText('操作成功');
+  await page.route('**/api/portals/*/hack', route => { hackPath = route.request().url(); return route.fulfill({ json: { result: { type: 'hack', portalId: target.id, items: [], key: false, cost: 50, ap: 0, counterDamage: 0 }, committedSeq: '3' } }); });
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.getByRole('menuitem', { name: '入侵 Hack' }).click();
+  await expect.poll(() => hackPath).toContain(`/portals/${target.id}/hack`);
+  await expect(page.locator('.toast')).toHaveText('无任何收获');
+});
+
+test('Hack收据展示合并物品与Key，Escape关闭；零掉落只显示底部文字', async ({ page }) => {
+  await mount(page);
+  let empty = false;
+  await page.route('**/api/portals/*/hack', route => route.fulfill({ json: { result: { type: 'hack', portalId: origin.id,
+    items: empty ? [] : [{ type: 'resonator', level: 1, quantity: 1 }, { type: 'resonator', level: 1, quantity: 1 }, { type: 'cube', level: 2, quantity: 1 }],
+    key: !empty, cost: 50, ap: 0, counterDamage: 0 }, committedSeq: '2' } }));
+  await page.getByRole('button', { name: /^Hack/ }).click();
+  const reward = page.getByRole('dialog', { name: '入侵收获' });
+  await expect(reward).toBeVisible();
+  await expect(reward.locator('.reward-item')).toHaveCount(3);
+  await expect(reward.locator('.reward-resonator')).toContainText('×2');
+  await expect(reward.locator('.reward-key')).toContainText('×1');
+  if (process.env.QA_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/hack-rewards.png` });
+  await page.keyboard.press('Escape'); await expect(reward).toHaveCount(0);
+  empty = true; await page.getByRole('button', { name: /^Hack/ }).click();
+  await expect(page.locator('.toast')).toHaveText('无任何收获'); await expect(reward).toHaveCount(0);
+});
+
+test('Hack失败保留错误，未知提交用原收据恢复后展示收获', async ({ page }) => {
+  await mount(page);
+  let unknown = false, requestId = '';
+  await page.route('**/api/portals/*/hack', route => {
+    requestId = route.request().postDataJSON().requestId;
+    return route.fulfill({ status: unknown ? 503 : 409, json: { error: { code: unknown ? 'RESULT_UNKNOWN' : 'OUT_OF_RANGE', message: unknown ? '结果未确认' : '距离过远' } } });
+  });
+  await page.getByRole('button', { name: /^Hack/ }).click();
+  await expect(page.locator('.toast')).toHaveText('距离过远');
+  await expect(page.locator('.toast')).not.toContainText('OUT_OF_RANGE');
+  await expect(page.getByRole('dialog', { name: '入侵收获' })).toHaveCount(0);
+  unknown = true; await page.getByRole('button', { name: /^Hack/ }).click();
+  await expect(page.getByRole('button', { name: '确认上次操作结果' })).toBeVisible();
+  await page.route('**/api/commands/*', route => route.fulfill({ json: { requestId, committedSeq: '2', result: { type: 'hack', portalId: origin.id, items: [], key: true, cost: 50, ap: 0, counterDamage: 0 } } }));
+  await page.getByRole('button', { name: '确认上次操作结果' }).click();
+  await expect(page.getByRole('dialog', { name: '入侵收获' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '确认上次操作结果' })).toHaveCount(0);
+});
+
+test('连线页直接提交，失败仅显示原因且可以重试', async ({ page }) => {
+  const requests: string[] = []; let failure = 'key';
+  await mount(page);
+  await page.route('**/api/links**', route => { requests.push(route.request().url()); return failure==='none'
+    ? route.fulfill({ json: { result: { type: 'link' }, committedSeq: '2' } })
+    : route.fulfill({ status: 409, json: { error: failure==='key' ? { code: 'KEY_REQUIRED', message: '需要目标 Key' } : {code:'LINK_CROSSING',message:'LINK_CROSSING'} } }); });
+  await page.getByRole('button', { name: '连线', exact:true }).click();
+  await expect(page.getByRole('button',{name:/起点|取消连线|检查连线/})).toHaveCount(0);
+  const button=page.getByRole('button',{name:`连线至 ${target.name}`,exact:true});
+  await button.click();await expect(page.locator('.toast')).toHaveText('需要目标 Key');
+  await expect(page.locator('.toast')).not.toContainText('KEY_REQUIRED');
+  failure='crossing';await button.click();
+  await expect(page.locator('.toast')).toHaveText('连线路径被其他连线阻挡');
+  await expect(page.locator('.toast')).not.toContainText('LINK_CROSSING');
+  failure='none';await button.click();await expect(page.locator('.toast')).toHaveText('操作成功');
+  expect(requests).toHaveLength(3); expect(requests.every(url => url.endsWith('/api/links'))).toBe(true);
+});
+
+test('快捷连线打开当前PO的列表，切换PO不会保留隐藏起点',async({page})=>{
+  const state=fixture();state.player.inventory.push({type:'key',level:1,portalId:origin.id,quantity:1});
+  await mount(page,state);
+  await page.getByRole('button',{name:'连线 查看可连据点',exact:true}).click();
+  await expect(page.getByRole('button',{name:`连线至 ${target.name}`,exact:true})).toBeVisible();
+  const p=await center(page,target.id);await page.mouse.click(p.x,p.y,{button:'right'});
+  await page.getByRole('menuitem',{name:'连线',exact:true}).click();
+  await expect(page.getByRole('heading',{name:target.name})).toBeVisible();
+  await expect(page.getByRole('button',{name:`连线至 ${origin.name}`,exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:`连线至 ${target.name}`,exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/起点|取消连线/})).toHaveCount(0);
+});
+
+test('连线列表按资格展示，一次点击提交并在Key耗尽后移除目标', async ({ page }) => {
+  const state=fixture(), requests:Record<string,unknown>[]=[];
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await mount(page,state);
+  await page.getByRole('button',{name:'连线',exact:true}).click();
+  const list=page.getByRole('region',{name:'可连线据点'});
+  const button=list.getByRole('button',{name:`连线至 ${target.name}`,exact:true});
+  await expect(button).toBeEnabled();
+  await expect(list.locator('.link-target')).toHaveCount(1);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/link-targets-desktop.png`});
+  await page.route('**/api/links',route=>{
+    requests.push(route.request().postDataJSON());
+    state.player.inventory=state.player.inventory.filter(item=>item.type!=='key');state.world.seq='2';
+    return route.fulfill({json:{result:{type:'link'},committedSeq:'2'}});
+  });
+  await button.click();
+  await expect(button).toHaveCount(0);
+  await expect(list).toContainText('暂无可连线据点');
+  expect(requests).toHaveLength(1);
+  expect(requests[0]).toMatchObject({payload:{originId:origin.id,destinationId:target.id}});
+  expect(errors).toEqual([]);
+});
+
+test('缺脚目标不列出，手机列表可用且移动时禁止提交',async({page})=>{
+  const state=fixture();state.world.portals[target.id].resonators[0]=null;
+  await page.setViewportSize({width:390,height:844});await mount(page,state);
+  await page.getByRole('button',{name:'连线',exact:true}).click();
+  const list=page.getByRole('region',{name:'可连线据点'});
+  await expect(list.locator('.link-target')).toHaveCount(0);
+  state.world.portals[target.id].resonators[0]={...state.world.portals[origin.id].resonators[0]!};state.world.seq='2';
+  await page.reload();await page.getByRole('button',{name:'连线',exact:true}).click();
+  const button=list.getByRole('button',{name:`连线至 ${target.name}`,exact:true});
+  await expect(button).toBeEnabled();await button.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/link-targets-mobile.png`});
+  state.player.movement={from:{x:origin.x,y:origin.y},to:{x:target.x,y:target.y},startAt:Date.now(),arriveAt:Date.now()+60_000};state.world.seq='3';
+  await page.reload();await page.getByRole('button',{name:'连线',exact:true}).click();
+  await expect(button).toBeDisabled();await expect(list).toContainText('移动中');
+});
+
+test('真实脚数量随快照更新，零距离八脚可辨；手机菜单与详情没有横向溢出', async ({ page }) => {
+  const state = fixture(); const po = state.world.portals[origin.id];
+  po.resonators = po.resonators.map((r, i) => i < 3 ? { ...r!, x: po.x, y: po.y } : null);
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type()==='error') errors.push(message.text()); });
+  await mount(page, state);
+  expect(await page.title()).toContain('场域战争');
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  await expect(page.locator(`[data-portal-id="${origin.id}"] [data-resonator-slot]`)).toHaveCount(3);
+  po.resonators=Array.from({length:8},(_,slot)=>({...po.resonators[0]!,generation:`updated-${slot}`,x:po.x,y:po.y}));
+  state.world.seq='2'; await page.reload();
+  const feet=page.locator(`[data-portal-id="${origin.id}"] [data-resonator-slot]`);
+  await expect(feet).toHaveCount(8);
+  const positions=await feet.locator('circle:first-of-type').evaluateAll(nodes=>nodes.map(node=>`${node.getAttribute('cx')}:${node.getAttribute('cy')}`));
+  expect(new Set(positions).size).toBe(8);
+  if (process.env.QA_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/map-detail-desktop.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.locator('.detail-panel')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  if (process.env.QA_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/map-detail-mobile.png` });
+  await page.getByRole('button', { name: '关闭详情' }).click();
+  const p = await center(page); await page.mouse.click(p.x, p.y, { button: 'right' });
+  const menu = page.getByRole('menu', { name: '地图快捷操作' }); await expect(menu).toBeVisible();
+  const box = await menu.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(390); expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+  if (process.env.QA_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.QA_SCREENSHOT_DIR}/map-menu-mobile.png` });
+  expect(errors).toEqual([]);
+});
+
+test('手机长按打开菜单而不发移动命令', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  let moves=0; const dialogs:string[]=[];
+  page.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.dismiss();});
+  await page.route('**/api/moves',route=>{moves++;return route.abort();});
+  await mount(page);await page.getByRole('button',{name:'关闭详情'}).click();
+  const p=await center(page),cdp=await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,id:1}]});
+  await expect(page.getByRole('menu',{name:'地图快捷操作'})).toBeVisible();
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await expect(page.getByRole('menuitem',{name:'入侵 Hack'})).toBeVisible();
+  expect(moves).toBe(0);expect(dialogs).toEqual([]);await cdp.detach();
+});
+
+test('侧栏可收起并记忆，首场引导移除，半透明战报显示真实事件',async({page})=>{
+  const state=fixture();state.player.tutorial={};
+  state.world.battleEvents=[
+    {id:'capture',at:Date.now(),faction:'red',kind:'capture',actor:'赤羽',portals:[origin.id]},
+    {id:'link',at:Date.now(),faction:'green',kind:'link',portals:[origin.id,target.id]},
+    {id:'score',at:Date.now(),faction:'blue',kind:'score',portals:[],amount:120},
+    {id:'attack',at:Date.now(),faction:'red',kind:'attack',actor:'赤羽',portals:[target.id]},
+  ];
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',e=>{if(['error','warning'].includes(e.type()))errors.push(e.text())});
+  await mount(page,state);expect(await page.title()).toContain('场域战争');
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+  await expect(page.getByText('首场：本区核心三角')).toHaveCount(0);
+  const feed=page.getByRole('region',{name:'实时战报'});
+  await expect(feed).toContainText('本阵营获得 120 积分');
+  await expect(feed).toContainText('赤羽 攻击了');
+  expect(await feed.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(245, 250, 255, 0.78)');
+  const before=await page.locator('.map-main').boundingBox();
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  await expect(page.locator('.left-rail')).toBeHidden();
+  const after=await page.locator('.map-main').boundingBox();expect(after!.width).toBeGreaterThan(before!.width+200);
+  await page.reload();await expect(page.locator('.left-rail')).toBeHidden();
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/battle-desktop.png`});
+  await page.getByRole('button',{name:'展开侧栏'}).click();await expect(page.locator('.left-rail')).toBeVisible();
+  await page.getByRole('button',{name:'收起侧栏'}).click();
+  await page.setViewportSize({width:390,height:844});await page.reload();
+  await expect(feed).toBeVisible();await expect(page.locator('.left-rail')).toBeHidden();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  const feedBox=await feed.boundingBox(),toolsBox=await page.locator('.map-tools').boundingBox();
+  expect(feedBox!.x+feedBox!.width).toBeLessThanOrEqual(toolsBox!.x);
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/battle-mobile.png`});
+  await page.getByRole('button',{name:'展开侧栏'}).click();await expect(page.locator('.left-rail')).toBeVisible();
+  await page.getByRole('button',{name:'收起侧栏'}).click();await expect(page.locator('.left-rail')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('跨级礼包逐一弹窗，Hack收获随后展示；未知收据恢复仍通知礼包',async({page})=>{
+  await mount(page);
+  const levelRewards=[2,3].map(level=>({level,items:[{type:'pulse',level,quantity:20},{type:'resonator',level,quantity:20},{type:'cube',level,quantity:10}]}));
+  let requestId='';
+  await page.route('**/api/portals/*/hack',route=>{requestId=route.request().postDataJSON().requestId;return route.fulfill({status:503,json:{error:{code:'RESULT_UNKNOWN',message:'结果未确认'}}})});
+  await page.route('**/api/commands/*',route=>route.fulfill({json:{requestId,committedSeq:'2',result:{type:'hack',portalId:origin.id,items:[],key:true,cost:50,ap:100,counterDamage:0,levelRewards}}}));
+  await page.getByRole('button',{name:/^Hack/}).click();
+  await page.getByRole('button',{name:'确认上次操作结果'}).click();
+  const reward=page.getByRole('dialog',{name:'晋升 L2 · 升级礼包'});await expect(reward).toBeVisible();
+  await expect(reward.locator('.reward-pulse')).toContainText('×20');
+  await expect(reward.locator('.reward-resonator')).toContainText('×20');
+  await expect(reward.locator('.reward-cube')).toContainText('×10');
+  await expect(reward).toContainText('礼包已自动放入背包');
+  if(process.env.QA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QA_SCREENSHOT_DIR}/level-reward.png`});
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog',{name:'晋升 L3 · 升级礼包'})).toBeVisible();
+  await page.getByRole('button',{name:'继续探索'}).click();await expect(page.getByRole('dialog',{name:'入侵收获'})).toBeVisible();
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
+});

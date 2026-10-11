@@ -1,0 +1,82 @@
+# 沿用既有部署标识，避免项目更名后创建另一组容器和数据库卷。
+name: junction-city
+
+services:
+  db:
+    image: postgres:18-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c
+    command: ["postgres", "-c", "synchronous_commit=on", "-c", "fsync=on", "-c", "full_page_writes=on"]
+    environment:
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run scripts/init-env.sh first}
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U game -d game"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: field-wars-app:local
+    pull_policy: build
+    command: ["node", "dist/server/migrate.js"]
+    environment:
+      DATABASE_URL: postgresql://game:${DB_PASSWORD:?Run scripts/init-env.sh first}@db:5432/game
+      SESSION_SECRET: ${SESSION_SECRET:?Run scripts/init-env.sh first}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run scripts/init-env.sh first}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: field-wars-app:local
+    pull_policy: build
+    command: ["node", "dist/server/main.js"]
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://game:${DB_PASSWORD:?Run scripts/init-env.sh first}@db:5432/game
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      SESSION_SECRET: ${SESSION_SECRET:?Run scripts/init-env.sh first}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run scripts/init-env.sh first}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: field-wars-web:local
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  pgdata:
